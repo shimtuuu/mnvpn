@@ -1,0 +1,37 @@
+{
+  "inbounds": [
+    {
+      "port": 1080,
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "trojan",
+      "settings": {
+        "servers": [
+          {
+            "address": "50.114.115.138",
+            "port": 11939,
+            "password": "sME7vR5kTl"
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "fingerprint": "chrome",
+          "serverName": "www.nvidia.com",
+          "publicKey": "I1X6fWWrreBtxWAn_hW5L9Mt7kbprG2kV6XrKDuxIyM",
+          "shortId": "3a697835b7f0",
+          "spiderX": "/"
+        }
+      }
+    }
+  ]
+}

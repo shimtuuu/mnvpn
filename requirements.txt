@@ -1,0 +1,10 @@
+aiogram==3.4.1
+aiosqlite==0.19.0
+python-dotenv==1.0.1
+aiohttp==3.9.3
+asyncssh==2.14.2
+paramiko
+aiohttp-socks
+qrcode[pil]==7.4.2
+Pillow==10.1.0
+cryptography==41.0.7
