@@ -14,6 +14,12 @@ DB_PATH = os.getenv("DB_PATH", "db.sqlite3")
 ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "mnvpn_support")
 
+# ==================== Brand (HitVPN parity) ====================
+BRAND_NAME = os.getenv("BRAND_NAME", "MNVPN")
+BRAND_TAGLINE = os.getenv("BRAND_TAGLINE", "Быстрый и безопасный VPN без логов")
+PRICE_PER_DEVICE_DISPLAY = os.getenv("PRICE_PER_DEVICE_DISPLAY", "100₽ / устройство / мес")
+EXPIRY_NOTICE_DAYS = int(os.getenv("EXPIRY_NOTICE_DAYS", "3"))
+
 # ==================== VPN Panel (3X-UI) ====================
 VPN_PANEL_URL = os.getenv("VPN_PANEL_URL")
 VPN_PANEL_USERNAME = os.getenv("VPN_PANEL_USERNAME")
@@ -41,9 +47,10 @@ GIFT_PRICES = {
 # ==================== Trial ====================
 TRIAL_ENABLED = os.getenv("TRIAL_ENABLED", "true").lower() == "true"
 TRIAL_HOURS = int(os.getenv("TRIAL_HOURS", "24"))
+TRIAL_DAYS = int(os.getenv("TRIAL_DAYS", "30"))
 
 # ==================== Referral ====================
-REFERRAL_BONUS_DAYS = int(os.getenv("REFERRAL_BONUS_DAYS", "3"))
+REFERRAL_BONUS_DAYS = int(os.getenv("REFERRAL_BONUS_DAYS", "15"))
 
 # ==================== Payments ====================
 # Yandex.Kassa / YooKassa

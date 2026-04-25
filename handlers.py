@@ -28,7 +28,8 @@ from payment_service import get_payment_service
 from config import (
     VPN_SUBSCRIPTION_PRICE, VPN_DEVICE_PRICE, SUBSCRIPTION_DAYS,
     GIFT_PRICES, TRIAL_ENABLED, TRIAL_HOURS, REFERRAL_BONUS_DAYS,
-    SUPPORT_USERNAME, BANNER_PATH, CRYPTO_WALLET_USDT
+    SUPPORT_USERNAME, BANNER_PATH, CRYPTO_WALLET_USDT,
+    BRAND_NAME, BRAND_TAGLINE, PRICE_PER_DEVICE_DISPLAY, TRIAL_DAYS
 )
 
 logger = logging.getLogger(__name__)
@@ -118,9 +119,10 @@ async def _send_welcome(message: Message):
     """Send welcome banner and main menu."""
     # Removed photo to enable seamless edit_text navigation (App-like UX)
     text = (
-        "✨ <b>Добро пожаловать в MNVPN!</b>\n\n"
-        "🔒 Надёжный VPN без логов, без ограничений по скорости и трафику.\n"
-        "🌍 Обход блокировок по протоколу VLESS + Reality.\n\n"
+        f"✨ <b>Добро пожаловать в {BRAND_NAME}!</b>\n\n"
+        f"🚀 {BRAND_TAGLINE}.\n"
+        f"💸 Тариф: <b>{PRICE_PER_DEVICE_DISPLAY}</b>.\n"
+        f"🎁 Пробный период — {TRIAL_DAYS} дней. Реферальный бонус — {REFERRAL_BONUS_DAYS} дней.\n\n"
         "⬇️ <b>Выберите раздел в меню ниже:</b>"
     )
     
