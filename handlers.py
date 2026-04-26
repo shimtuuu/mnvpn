@@ -429,20 +429,12 @@ async def show_device_key(callback: CallbackQuery):
         return
 
     sub_link = vpn_service.generate_subscription_link(device['sub_id'])
-    happ_link = vpn_service.generate_happ_deeplink(device['sub_id'])
-
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📲 Открыть в Happ", url=happ_link)],
-        [InlineKeyboardButton(text="📥 Скачать конфиг", callback_data=f"download_{device_id}")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="my_configs")],
-    ])
 
     try:
         await callback.message.edit_text(
             f"🔑 <b>{device.get('device_name', 'Устройство')}</b>\n\n"
             f"🔗 Ссылка подписки:\n<code>{sub_link}</code>",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🚀 ПОДКЛЮЧИТЬ (HAPP)", url=happ_link)],
                 [
                     InlineKeyboardButton(text="🍎 iOS", callback_data=f"setup_ios_{device_id}"),
                     InlineKeyboardButton(text="🤖 Android", callback_data=f"setup_android_{device_id}"),
