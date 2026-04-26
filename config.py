@@ -40,6 +40,15 @@ SUBSCRIPTION_PERIODS = {
     12: {"months": 12, "days": 365, "discount": 20, "name": "1 год (-20%)"},
 }
 
+# Referral
+REFERRAL_BONUS_DAYS = int(os.getenv("REFERRAL_BONUS_DAYS", "3"))
+
+# Legacy pricing (to prevent imports breaking)
+VPN_SUBSCRIPTION_PRICE = 100
+VPN_DEVICE_PRICE = 100
+SUBSCRIPTION_DAYS = 30
+GIFT_PRICES = {1: 100, 3: 250, 6: 450}
+
 # ==================== Trial ====================
 TRIAL_DURATION_DAYS = 1  # 24 hours
 TRIAL_MAX_DEVICES = 1
