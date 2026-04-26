@@ -1,362 +1,142 @@
-# MNVPN - Платный VPN-сервис на AmneziaWG
+# MNVPN Telegram Bot
 
-![Version](https://img.shields.io/badge/version-1.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+Коммерческий VPN-бот для Telegram с интеграцией 3X-UI панели.
 
-## Описание
+## Возможности
 
-**MNVPN** - это полнофункциональный платный VPN-сервис на базе протокола **AmneziaWG** с интеграцией Telegram-бота, системой платежей Yandex.Kassa и поддержкой многоустройственных подписок.
+- 🔐 **Управление подписками** — система тарифов (1/3/5 устройств) с автопродлением
+- 📱 **Мульти-девайс** — до 5 устройств на один аккаунт
+- 🆓 **Пробный период** — 24 часа бесплатно
+- 🎁 **Подарочные сертификаты** — создание и активация gift-кодов
+- 👥 **Реферальная программа** — +7 дней за каждого приглашённого
+- 💳 **Оплата через Telegram Stars** — встроенная платёжная система
+- 🔑 **Автоматическая генерация ключей** — VLESS, VMess, Trojan, Shadowsocks
+- 📊 **Учёт трафика** — контроль использованного объёма данных
 
-### Ключевые возможности:
+## Технологии
 
-- 🔐 **AmneziaWG протокол** - современный и безопасный протокол
-- 💳 **Yandex.Kassa интеграция** - прием платежей от российских пользователей
-- 📱 **Telegram Bot** - полное управление подписками через Telegram
-- 📊 **Multi-device поддержка** - подписка на несколько устройств одновременно
-- 🚀 **Масштабируемость** - готов к развертыванию на несколько серверов
-- 🔄 **Автоматизация** - cron-задачи для управления подписками
-- 📈 **Analytics** - отслеживание платежей и активных пользователей
-- 🔒 **Безопасность** - уникальные ключи для каждого устройства
+- **Python 3.11+**
+- **aiogram 3.x** — асинхронный фреймворк для Telegram Bot API
+- **SQLAlchemy 2.x** — ORM для работы с базой данных
+- **aiosqlite** — асинхронный драйвер SQLite
+- **httpx** — HTTP-клиент для интеграции с 3X-UI
+- **qrcode** — генерация QR-кодов для быстрого подключения
 
----
+## Установка
 
-## Быстрый старт
-
-### Требования:
-
-- Python 3.9+
-- VPS с Ubuntu 22.04+ (2+ vCore, 2+ GB RAM)
-- Telegram Bot Token
-- Yandex.Kassa аккаунт (опционально для MVP)
-
-### Установка (3 минуты):
+### 1. Клонирование репозитория
 
 ```bash
-# 1. Клонировать репозиторий
-git clone https://github.com/yourusername/mnvpn.git
+git clone https://github.com/shimtuuu/mnvpn.git
 cd mnvpn
-
-# 2. Создать виртуальное окружение
-python3 -m venv .venv
-source .venv/bin/activate
-
-# 3. Установить зависимости
-pip install -r requirements.txt
-
-# 4. Создать .env файл
-cp .env.example .env
-# Отредактировать .env с вашими данными
-
-# 5. Инициализировать БД
-python3 -c "import asyncio; from database import init_db; asyncio.run(init_db())"
-
-# 6. Запустить бота
-python3 bot.py
 ```
 
----
+### 2. Настройка окружения
+
+Создайте файл `.env` в корне проекта:
+
+```env
+BOT_TOKEN=your_telegram_bot_token_here
+
+# 3X-UI Panel
+XUI_HOST=http://your-panel-domain.com:2053
+XUI_USERNAME=admin
+XUI_PASSWORD=your_password
+XUI_INBOUND_ID=1
+
+# VPN Server
+VPN_SERVER_DOMAIN=vpn.yourdomain.com
+VPN_SERVER_IP=1.2.3.4
+VPN_SERVER_PORT=443
+VPN_SNI=www.apple.com
+VPN_FINGERPRINT=chrome
+
+# Payment (optional)
+YOOKASSA_SHOP_ID=your_shop_id
+YOOKASSA_SECRET_KEY=your_secret_key
+CRYPTO_WALLET_USDT=your_usdt_wallet
+
+# Support
+SUPPORT_USERNAME=your_support_username
+```
+
+### 3. Установка зависимостей
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Запуск бота
+
+```bash
+python main.py
+```
+
+При первом запуске автоматически создастся база данных `mnvpn.db`.
 
 ## Структура проекта
 
 ```
 mnvpn/
-├── bot.py                          # Основной бот (точка входа)
-├── config.py                       # Конфигурация (читает из .env)
-├── database.py                     # Слой работы с БД
-├── vpn_service.py                  # Управление VPN клиентами (3X-UI)
-├── payment_service.py              # Интеграция с Yandex.Kassa
-├── handlers.py                     # Telegram боттели команды
-├── webhook_server.py               # FastAPI сервер для платежных вебхуков
-├── cleanup_subscriptions.py        # Cron скрипт для очистки истекших подписок
-├── check_payment_status.py         # Cron скрипт для проверки платежей
-├── test_integration.py             # Интеграционные тесты
-├── requirements.txt                # Python зависимости
-├── .env.example                    # Пример конфигурации
-├── DEPLOYMENT_GUIDE.md             # Полное руководство по развертыванию
-├── README.md                       # Этот файл
-└── scratch/                        # Вспомогательные скрипты
-    ├── mnvpn-bot.service          # Systemd сервис
-    ├── test_3xui.py               # Тестирование 3X-UI
-    └── ...
+├── main.py              # Точка входа
+├── config.py            # Конфигурация и переменные окружения
+├── database.py          # ORM модели и функции работы с БД
+├── handlers.py          # Обработчики команд и callback-запросов
+├── vpn_service.py       # Интеграция с 3X-UI панелью
+├── payment_service.py   # Интеграция с платёжными системами
+├── requirements.txt     # Python зависимости
+├── .env                 # Секретные переменные (не коммитится)
+└── README.md            # Документация
 ```
 
----
+## Команды бота
 
-## Архитектура системы
+- `/start` — Главное меню
+- `/help` — Справка по использованию
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Telegram Users                          │
-└────────────────┬────────────────────────────────────────────┘
-                 │
-         ┌───────▼────────┐
-         │  Telegram Bot  │
-         │   (aiogram)    │
-         └───────┬────────┘
-                 │
-    ┌────────────┼────────────┐
-    │            │            │
-    ▼            ▼            ▼
-┌────────┐  ┌────────┐  ┌──────────┐
-│Database│  │3X-UI   │  │Yandex.   │
-│(SQLite)│  │Panel   │  │Kassa     │
-└────────┘  └────────┘  └──────────┘
-    │            │            │
-    └────────────┼────────────┘
-                 │
-         ┌───────▼────────┐
-         │  VPN Server    │
-         │  (AmneziaWG)   │
-         └────────────────┘
-                 │
-         ┌───────▼────────┐
-         │   VPN Users    │
-         └────────────────┘
-```
+## Система тарифов (Ultima Style)
 
----
+### Количество устройств
 
-## API и команды
+| Устройств | Название | Цена/месяц (₽) | Цена/месяц (⭐) |
+|-----------|----------|----------------|------------------|
+| 1         | Solo     | 100            | 80               |
+| 3         | Family   | 200            | 160              |
+| 5         | Pro      | 300            | 240              |
 
-### Telegram Bot команды:
+### Периоды подписки (с прогрессивными скидками)
 
-| Команда | Описание |
-|---------|---------|
-| `/start` | Начать работу с ботом, показать меню |
-| `/help` | Справка по использованию |
-| `/profile` | Показать профиль пользователя |
-| `/buy` | Купить подписку |
-| `/upgrade` | Добавить дополнительное устройство |
-| `/getkey` | Получить VPN конфигурацию |
-| `/devices` | Показать список устройств |
+| Период   | Скидка |
+|----------|--------|
+| 1 месяц  | 0%     |
+| 3 месяца | 10%    |
+| 6 месяцев| 15%    |
+| 1 год    | 20%    |
 
-### Webhook endpoints:
+**Пример:** 
+- Family (3 устройства) на 6 месяцев = 200₽ × 6 месяцев × 0.85 (скидка 15%) = **1020₽**
 
-```
-POST /webhook/payment  # Получает уведомления от Yandex.Kassa
-GET  /health           # Проверка здоровья сервера
-```
+## Интеграция с 3X-UI
 
----
-
-## Конфигурация
-
-### Основные переменные окружения:
-
-```env
-# Telegram
-BOT_TOKEN=123456789:ABCDefGhIjKlMnOpQrStUvWxYz1234567890
-
-# Database
-DB_PATH=/opt/mnvpn/db.sqlite3
-
-# VPN Panel
-VPN_PANEL_URL=https://your-vps-ip:2053
-VPN_PANEL_USERNAME=admin
-VPN_PANEL_PASSWORD=your_password
-
-# Yandex.Kassa
-YANDEX_KASSA_SHOP_ID=123456
-YANDEX_KASSA_API_KEY=test_KaZuzo_AbCdEf...
-YANDEX_KASSA_WEBHOOK_SECRET=your_webhook_secret
-
-# Pricing
-VPN_SUBSCRIPTION_PRICE=100        # в рублях
-VPN_DEVICE_PRICE=100              # в рублях за доп. устройство
-SUBSCRIPTION_DAYS=30              # дни
-```
-
-Полный список переменных см. в [.env.example](.env.example)
-
----
-
-## Развертывание в production
-
-### Быстрое развертывание (1 сервер):
-
-```bash
-# Следуйте пошаговому руководству в DEPLOYMENT_GUIDE.md
-# Краткий путь:
-1. Купить VPS (Hetzner, DigitalOcean, и т.д.)
-2. Установить 3X-UI панель
-3. Развернуть приложение
-4. Настроить Yandex.Kassa
-5. Запустить через systemd
-6. Настроить cron задачи
-```
-
-### Масштабирование (несколько серверов):
-
-```bash
-# См. раздел "Масштабирование" в DEPLOYMENT_GUIDE.md
-# - Перейти на PostgreSQL
-# - Распределить пользователей между серверами
-# - Настроить load balancing
-```
-
----
-
-## Тестирование
-
-### Запуск интеграционных тестов:
-
-```bash
-python3 test_integration.py
-```
-
-Тесты проверяют:
-- ✓ Инициализацию БД
-- ✓ Подключение к 3X-UI
-- ✓ Создание платежных счетов
-- ✓ Проверку вебхук-подписей
-- ✓ Полный цикл пользователя
-
-### Тестирование платежей:
-
-Используйте тестовые карты Yandex.Kassa:
-- `4111 1111 1111 1111` - успешный платеж
-- `4000 0000 0000 0002` - отклоненный платеж
-
----
+Бот автоматически:
+- Создаёт клиентов в указанном Inbound
+- Генерирует уникальные UUID для каждого устройства
+- Формирует Subscription Links (поддержка VLESS, VMess, Trojan, Shadowsocks)
+- Генерирует QR-коды для быстрого подключения
+- Отслеживает использованный трафик
+- Деактивирует клиентов при истечении подписки
 
 ## Безопасность
 
-### Реализованные меры:
-
-- ✅ HMAC-SHA256 подпись вебхуков
-- ✅ SSH ключ доступ к VPS
-- ✅ Уникальные UUID для каждого клиента
-- ✅ Шифрование в БД (пароли)
-- ✅ Rate limiting на API
-- ✅ Проверка подписи перед обработкой
-
-### TODO для production:
-
-- [ ] Двухфакторная аутентификация
-- [ ] IP белые списки для админа
-- [ ] Регулярные бэкапы БД
-- [ ] Мониторинг и алерты
-- [ ] DDoS защита
-- [ ] Шифрование трафика между серверами
-
----
-
-## Мониторинг и Логирование
-
-### Логи системы:
-
-```bash
-# Логи бота
-journalctl -u mnvpn-bot.service -f
-
-# Логи платежей
-tail -f /var/log/mnvpn_payment_check.log
-
-# Логи cleanup
-tail -f /var/log/mnvpn_cleanup.log
-```
-
-### Метрики:
-
-```bash
-# Количество пользователей
-sqlite3 db.sqlite3 "SELECT COUNT(*) FROM users;"
-
-# Активные подписки
-sqlite3 db.sqlite3 "SELECT COUNT(*) FROM users WHERE subscription_expiry > datetime('now');"
-
-# Доход
-sqlite3 db.sqlite3 "SELECT SUM(amount_rubles) FROM payments WHERE status = 'completed';"
-```
-
----
-
-## Расчет прибыльности
-
-### Модель доходов:
-
-- **Базовая подписка**: 100₽/месяц (1 устройство)
-- **Доп. устройство**: 100₽ за каждое
-
-### Пример расчета при 100 активных пользователях:
-
-```
-Месячные доходы:
-  - 100 пользователей × 100₽ = 10,000₽
-  - 20% имеют 2+ устройств: 20 × 100₽ = 2,000₽
-  
-Итого доход: 12,000₽/месяц
-
-Затраты:
-  - VPS (2 vCore): $10-15 ≈ 800-1,200₽
-  - Доменное имя: $12 ≈ 1,000₽/год
-  
-Итого затраты: ~1,000₽/месяц
-
-Прибыль: 12,000 - 1,000 = 11,000₽/месяц
-```
-
----
-
-## FAQ
-
-### Q: Можно ли использовать на iOS/Android?
-**A:** Да! Используйте приложение [Happ VPN](https://happ.app) или другие приложения с поддержкой WireGuard.
-
-### Q: Какая максимальная пропускная способность?
-**A:** Зависит от VPS. На Hetzner Cloud можно достичь 1-5 Gbps для одного сервера.
-
-### Q: Как обновить бот в production?
-```bash
-systemctl stop mnvpn-bot.service
-cd /opt/mnvpn
-git pull origin main
-pip install -r requirements.txt
-systemctl start mnvpn-bot.service
-```
-
-### Q: Что делать если упал сервер?
-```bash
-# systemd автоматически перезагрузит бота
-# Проверьте статус:
-systemctl status mnvpn-bot.service
-
-# Посмотрите логи:
-journalctl -u mnvpn-bot.service -n 50
-```
-
-### Q: Можно ли добавить другие способы оплаты?
-**A:** Да! Код модулирован. Дублируйте `payment_service.py` и замените класс:
-```python
-class StripePaymentService(PaymentService):
-    # Ваша реализация Stripe
-```
-
----
+- Все секретные данные хранятся в `.env` (не коммитится в Git)
+- Пароли к 3X-UI панели передаются через HTTPS
+- UUID клиентов генерируются криптографически стойкими методами
+- База данных использует асинхронные транзакции
 
 ## Лицензия
 
-MIT License - см. [LICENSE](LICENSE)
+MIT License
 
----
+## Поддержка
 
-## Поддержка и контакты
-
-- 📧 Email: support@mnvpn.example.com
-- 💬 Telegram: [@mnvpn_support](https://t.me/mnvpn_support)
-- 🐛 Issues: GitHub Issues
-
----
-
-## Благодарности
-
-- [aiogram](https://github.com/aiogram/aiogram) - Telegram Bot API
-- [3X-UI](https://github.com/mhsanaei/3x-ui) - VPN Panel
-- [Yandex.Kassa](https://kassa.yandex.ru) - Payment Gateway
-
----
-
-**Версия**: 1.0  
-**Обновлено**: 2026-04-16  
-**Статус**: MVP готов к запуску
+По всем вопросам: [@mnvpnsupport](https://t.me/mnvpnsupport)

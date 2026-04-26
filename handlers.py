@@ -138,7 +138,6 @@ async def cmd_start(message: Message):
 
 async def _send_welcome(message: Message):
     """Send welcome banner and main menu."""
-    # Removed photo to enable seamless edit_text navigation (App-like UX)
     text = (
         "✨ <b>Добро пожаловать в MNVPN!</b>\n\n"
         "🔒 Надёжный VPN без логов, без ограничений по скорости и трафику.\n"
@@ -146,17 +145,38 @@ async def _send_welcome(message: Message):
         "⬇️ <b>Выберите раздел в меню ниже:</b>"
     )
     
-    # Try to edit, if it fails, send a new message
-    try:
-        await message.edit_text(text, reply_markup=main_menu_kb(), parse_mode="HTML")
-    except Exception:
-        await message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
+    # Try to send with photo first (initial /start)
+    if BANNER_PATH and os.path.exists(BANNER_PATH):
+        try:
+            photo = FSInputFile(BANNER_PATH)
+            await message.answer_photo(
+                photo=photo,
+                caption=text,
+                reply_markup=main_menu_kb(),
+                parse_mode="HTML"
+            )
+            return
+        except Exception as e:
+            logger.warning(f"Failed to send banner: {e}")
+    
+    # Fallback: text-only message
+    await message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "back_menu")
 async def back_to_menu(callback: CallbackQuery):
     await callback.answer()
-    await _send_welcome(callback.message)
+    text = (
+        "✨ <b>Добро пожаловать в MNVPN!</b>\n\n"
+        "🔒 Надёжный VPN без логов, без ограничений по скорости и трафику.\n"
+        "🌍 Обход блокировок по протоколу VLESS + Reality.\n\n"
+        "⬇️ <b>Выберите раздел в меню ниже:</b>"
+    )
+    # Edit text (no photo in navigation for seamless UX)
+    try:
+        await callback.message.edit_text(text, reply_markup=main_menu_kb(), parse_mode="HTML")
+    except Exception:
+        await callback.message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 
 # ==================== 🔐 Управление VPN ====================

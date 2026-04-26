@@ -1,80 +1,74 @@
-# config.py
+"""Configuration for MNVPN Telegram Bot."""
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# ==================== Telegram Bot ====================
+# === TELEGRAM BOT ===
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN is not set in .env")
+    raise ValueError("BOT_TOKEN environment variable is not set")
 
-ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x]
+# === XUI PANEL ===
+XUI_HOST = os.getenv("XUI_HOST", "http://localhost:2053")
+XUI_USERNAME = os.getenv("XUI_USERNAME", "admin")
+XUI_PASSWORD = os.getenv("XUI_PASSWORD", "admin")
+XUI_INBOUND_ID = int(os.getenv("XUI_INBOUND_ID", "1"))
 
-# ==================== 3X-UI Panel ====================
-PANEL_URL = os.getenv("PANEL_URL", os.getenv("VPN_PANEL_URL"))
-PANEL_USERNAME = os.getenv("PANEL_USERNAME", os.getenv("VPN_PANEL_USERNAME"))
-PANEL_PASSWORD = os.getenv("PANEL_PASSWORD", os.getenv("VPN_PANEL_PASSWORD"))
+# === DATABASE ===
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///mnvpn.db")
 
-# Aliases for compatibility with old code
-VPN_PANEL_URL = PANEL_URL
-VPN_PANEL_USERNAME = PANEL_USERNAME
-VPN_PANEL_PASSWORD = PANEL_PASSWORD
+# === PRICING (Ultima Style — Multi-Device Plans + Period Discounts) ===
 
-# Server details for generating client links
-SERVER_IP = os.getenv("SERVER_IP", "50.114.115.138")
-SERVER_DOMAIN = os.getenv("SERVER_DOMAIN", "50.114.115.138.nip.io")
-SUB_PORT = os.getenv("SUB_PORT", "2096")
-SUB_SECRET = os.getenv("SUB_SECRET", "DR8BISV6VBK13aNbnOTCs66mZbw0YZPl")
-INBOUND_ID = int(os.getenv("INBOUND_ID", "1"))
-
-# ==================== Pricing Model (Ultima VPN style) ====================
-# Base price: 100₽/month for 1 device, with volume discounts
+# Device Plans (Monthly base price)
 DEVICE_PLANS = {
-    1: {"price_per_month_rub": 100, "price_per_month_stars": 75, "name": "1 устройство"},
-    2: {"price_per_month_rub": 180, "price_per_month_stars": 135, "name": "2 устройства"},
-    3: {"price_per_month_rub": 250, "price_per_month_stars": 190, "name": "3 устройства"},
-    5: {"price_per_month_rub": 400, "price_per_month_stars": 300, "name": "5 устройств"},
+    1: {"name": "Solo (1 устройство)", "price_per_month_rub": 100, "price_per_month_stars": 80},
+    3: {"name": "Family (3 устройства)", "price_per_month_rub": 200, "price_per_month_stars": 160},
+    5: {"name": "Pro (5 устройств)", "price_per_month_rub": 300, "price_per_month_stars": 240},
 }
 
-# Subscription periods with volume discounts
+# Subscription Periods (months: {days, discount%})
 SUBSCRIPTION_PERIODS = {
-    1: {"months": 1, "days": 30, "discount": 0, "name": "1 месяц"},
-    3: {"months": 3, "days": 90, "discount": 10, "name": "3 месяца (-10%)"},
-    6: {"months": 6, "days": 180, "discount": 15, "name": "6 месяцев (-15%)"},
-    12: {"months": 12, "days": 365, "discount": 20, "name": "1 год (-20%)"},
+    1:  {"name": "1 месяц", "months": 1,  "days": 30,  "discount": 0},
+    3:  {"name": "3 месяца", "months": 3,  "days": 90,  "discount": 10},
+    6:  {"name": "6 месяцев", "months": 6,  "days": 180, "discount": 15},
+    12: {"name": "1 год",     "months": 12, "days": 365, "discount": 20},
 }
 
-# Referral
-REFERRAL_BONUS_DAYS = int(os.getenv("REFERRAL_BONUS_DAYS", "3"))
-
-# Legacy pricing (to prevent imports breaking)
-VPN_SUBSCRIPTION_PRICE = 100
-VPN_DEVICE_PRICE = 100
+# Legacy (for backward compatibility)
+VPN_SUBSCRIPTION_PRICE = DEVICE_PLANS[1]["price_per_month_rub"]
+VPN_DEVICE_PRICE = 50  # Additional slot price
 SUBSCRIPTION_DAYS = 30
-GIFT_PRICES = {1: 100, 3: 250, 6: 450}
 
-# Trial
-TRIAL_DURATION_DAYS = 1  # 24 hours
+# === FEATURES ===
+TRIAL_ENABLED = True
 TRIAL_HOURS = 24
-TRIAL_MAX_DEVICES = 1
-TRIAL_ENABLED = os.getenv("TRIAL_ENABLED", "true").lower() == "true"
 
-# ==================== Limits ====================
-MAX_CLIENTS_PER_USER = 5
+# === REFERRAL PROGRAM ===
+REFERRAL_BONUS_DAYS = 7
 
-# ==================== Payments ====================
-# Yandex.Kassa / YooKassa (optional)
-YANDEX_KASSA_SHOP_ID = os.getenv("YANDEX_KASSA_SHOP_ID")
-YANDEX_KASSA_API_KEY = os.getenv("YANDEX_KASSA_API_KEY")
-YANDEX_KASSA_WEBHOOK_SECRET = os.getenv("YANDEX_KASSA_WEBHOOK_SECRET")
+# === GIFT VPN ===
+GIFT_PRICES = {
+    1: 100,
+    3: 250,
+    6: 450,
+}
 
-# Crypto (USDT TRC20) - optional
-CRYPTO_WALLET_USDT = os.getenv("CRYPTO_WALLET_USDT", "")
+# === PAYMENT PROVIDERS ===
+YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID")
+YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY")
 
-# ==================== Misc ====================
-DB_PATH = os.getenv("DB_PATH", "mnvpn.db")
-SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "mnvpn_support")
-APP_DOMAIN = os.getenv("APP_DOMAIN", "https://example.com")
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-BANNER_PATH = os.path.join(os.path.dirname(__file__), "assets", "banner.png")
+CRYPTO_WALLET_USDT = os.getenv("CRYPTO_WALLET_USDT")
+
+# === SUPPORT ===
+SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "mnvpnsupport")
+
+# === MEDIA ===
+BANNER_PATH = os.getenv("BANNER_PATH", "assets/banner.jpg")
+
+# === VPN CONNECTIVITY ===
+VPN_SERVER_DOMAIN = os.getenv("VPN_SERVER_DOMAIN", "vpn.example.com")
+VPN_SERVER_IP = os.getenv("VPN_SERVER_IP", "1.2.3.4")
+VPN_SERVER_PORT = int(os.getenv("VPN_SERVER_PORT", "443"))
+VPN_SNI = os.getenv("VPN_SNI", "www.apple.com")
+VPN_FINGERPRINT = os.getenv("VPN_FINGERPRINT", "chrome")

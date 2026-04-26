@@ -11,7 +11,7 @@ import string
 from typing import Optional, List, Dict
 from datetime import datetime, timedelta
 
-from config import DB_PATH
+DB_PATH = "mnvpn.db"  # Fixed: moved here from config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,7 +38,6 @@ async def init_db():
                 referral_code TEXT UNIQUE,
                 referred_by INTEGER DEFAULT NULL,
                 trial_used BOOLEAN DEFAULT 0,
-                max_devices INTEGER DEFAULT 1,
                 is_blocked BOOLEAN DEFAULT 0
             )
         ''')
@@ -136,11 +135,13 @@ async def init_db():
             'trial_used': "ALTER TABLE users ADD COLUMN trial_used BOOLEAN DEFAULT 0",
             'max_devices': "ALTER TABLE users ADD COLUMN max_devices INTEGER DEFAULT 1",
             'is_blocked': "ALTER TABLE users ADD COLUMN is_blocked BOOLEAN DEFAULT 0",
-            'max_devices': "ALTER TABLE users ADD COLUMN max_devices INTEGER DEFAULT 1",
         }
         for col, sql in migrations.items():
             if col not in columns:
-                await db.execute(sql)
+                try:
+                    await db.execute(sql)
+                except Exception as e:
+                    logger.warning(f"Migration for {col} skipped: {e}")
 
         await db.commit()
         logger.info("Database initialized with all tables.")
@@ -184,17 +185,6 @@ async def update_user_subscription(user_id: int, expiry_date: str):
         )
         await db.commit()
         logger.info(f"User {user_id} subscription updated to {expiry_date}")
-
-async def purchase_subscription(user_id: int, devices: int, days: int):
-    """Extend subscription and set device limit (Ultima style: overwrites)."""
-    async with aiosqlite.connect(DB_PATH) as db:
-        new_expiry = (datetime.now() + timedelta(days=days)).isoformat()
-        await db.execute(
-            'UPDATE users SET subscription_expiry = ?, max_devices = ? WHERE user_id = ?',
-            (new_expiry, devices, user_id)
-        )
-        await db.commit()
-        return new_expiry
 
 
 async def extend_subscription(user_id: int, days: int):
