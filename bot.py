@@ -16,7 +16,7 @@ from config import (
 from database import (
     init_db, get_expired_users, get_expiring_users,
     update_user_subscription, get_user, apply_referral_bonus,
-    extend_subscription, is_sub_active_str
+    extend_subscription, is_sub_active_str, get_user_clients
 )
 from handlers import router
 from admin_handlers import admin_router
@@ -33,24 +33,55 @@ bot_instance: Bot = None
 
 
 async def check_expired_subscriptions():
-    """Background task: disable expired clients in 3X-UI every hour (instead of deleting)."""
+    """
+    Background task: disable ALL devices of expired users in 3X-UI every hour.
+    
+    This ensures:
+    1. Users with expired subscription cannot use VPN on ANY device
+    2. Keys can be reactivated after payment (not deleted, just disabled)
+    3. Database stays in sync with 3X-UI panel state
+    """
     while True:
         try:
             expired = await get_expired_users()
             for user in expired:
                 user_id = user['user_id']
-                uuid = user.get('uuid')
-                if uuid:
-                    # DISABLE client instead of deleting — this allows reactivation after payment
-                    disabled = await vpn_service.disable_client(uuid)
-                    if disabled:
-                        logger.info(f"Expired client {user_id} (UUID: {uuid}) disabled in 3X-UI")
-                    else:
-                        logger.warning(f"Failed to disable expired client {user_id} (UUID: {uuid})")
+                
+                # Get ALL devices (clients) for this user
+                devices = await get_user_clients(user_id)
+                
+                if not devices:
+                    logger.info(f"User {user_id} has expired subscription but no devices")
+                    continue
+                
+                # Disable EVERY device in 3X-UI
+                disabled_count = 0
+                for device in devices:
+                    uuid = device.get('uuid')
+                    device_name = device.get('device_name', 'Unknown')
+                    
+                    if uuid:
+                        disabled = await vpn_service.disable_client(uuid)
+                        if disabled:
+                            disabled_count += 1
+                            logger.info(
+                                f"✅ Disabled device '{device_name}' (UUID: {uuid}) "
+                                f"for expired user {user_id}"
+                            )
+                        else:
+                            logger.warning(
+                                f"⚠️ Failed to disable device '{device_name}' (UUID: {uuid}) "
+                                f"for user {user_id}"
+                            )
+                
+                logger.info(
+                    f"User {user_id}: disabled {disabled_count}/{len(devices)} devices due to expired subscription"
+                )
+                
         except Exception as e:
-            logger.error(f"Error checking expired subs: {e}")
+            logger.error(f"Error checking expired subscriptions: {e}", exc_info=True)
 
-        await asyncio.sleep(3600)  # Every hour
+        await asyncio.sleep(3600)  # Check every hour
 
 
 async def notify_expiring_subscriptions(bot: Bot):
