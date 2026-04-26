@@ -16,6 +16,11 @@ PANEL_URL = os.getenv("PANEL_URL", os.getenv("VPN_PANEL_URL"))
 PANEL_USERNAME = os.getenv("PANEL_USERNAME", os.getenv("VPN_PANEL_USERNAME"))
 PANEL_PASSWORD = os.getenv("PANEL_PASSWORD", os.getenv("VPN_PANEL_PASSWORD"))
 
+# Aliases for compatibility with old code
+VPN_PANEL_URL = PANEL_URL
+VPN_PANEL_USERNAME = PANEL_USERNAME
+VPN_PANEL_PASSWORD = PANEL_PASSWORD
+
 # Server details for generating client links
 SERVER_IP = os.getenv("SERVER_IP", "50.114.115.138")
 SERVER_DOMAIN = os.getenv("SERVER_DOMAIN", "50.114.115.138.nip.io")
