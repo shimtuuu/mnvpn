@@ -235,6 +235,14 @@ async def update_user_device_limit(user_id: int, limit: int):
         await db.commit()
 
 
+async def get_user_clients(user_id: int) -> List[dict]:
+    """Get all clients (devices) for a specific user."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute('SELECT * FROM devices WHERE user_id = ?', (user_id,)) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
 async def update_user_xui_data(user_id: int, uuid: str, sub_id: str):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
