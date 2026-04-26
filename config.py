@@ -1,23 +1,20 @@
+# config.py
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# ==================== Bot ====================
+# ==================== Telegram Bot ====================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN is not set in .env")
 
-DB_PATH = os.getenv("DB_PATH", "db.sqlite3")
+ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x]
 
-# Admin Telegram IDs (comma-separated in .env)
-ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
-SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "mnvpn_support")
-
-# ==================== VPN Panel (3X-UI) ====================
-VPN_PANEL_URL = os.getenv("VPN_PANEL_URL")
-VPN_PANEL_USERNAME = os.getenv("VPN_PANEL_USERNAME")
-VPN_PANEL_PASSWORD = os.getenv("VPN_PANEL_PASSWORD")
+# ==================== 3X-UI Panel ====================
+PANEL_URL = os.getenv("PANEL_URL", os.getenv("VPN_PANEL_URL"))
+PANEL_USERNAME = os.getenv("PANEL_USERNAME", os.getenv("VPN_PANEL_USERNAME"))
+PANEL_PASSWORD = os.getenv("PANEL_PASSWORD", os.getenv("VPN_PANEL_PASSWORD"))
 
 # Server details for generating client links
 SERVER_IP = os.getenv("SERVER_IP", "50.114.115.138")
@@ -26,38 +23,43 @@ SUB_PORT = os.getenv("SUB_PORT", "2096")
 SUB_SECRET = os.getenv("SUB_SECRET", "DR8BISV6VBK13aNbnOTCs66mZbw0YZPl")
 INBOUND_ID = int(os.getenv("INBOUND_ID", "1"))
 
-# ==================== Pricing ====================
-VPN_SUBSCRIPTION_PRICE = float(os.getenv("VPN_SUBSCRIPTION_PRICE", "100"))
-VPN_DEVICE_PRICE = float(os.getenv("VPN_DEVICE_PRICE", "100"))
-SUBSCRIPTION_DAYS = int(os.getenv("SUBSCRIPTION_DAYS", "30"))
+# ==================== Pricing Model (Ultima VPN style) ====================
+# Base price: 100₽/month for 1 device, with volume discounts
+DEVICE_PLANS = {
+    1: {"price_per_month_rub": 100, "price_per_month_stars": 75, "name": "1 устройство"},
+    2: {"price_per_month_rub": 180, "price_per_month_stars": 135, "name": "2 устройства"},
+    3: {"price_per_month_rub": 250, "price_per_month_stars": 190, "name": "3 устройства"},
+    5: {"price_per_month_rub": 400, "price_per_month_stars": 300, "name": "5 устройств"},
+}
 
-# Gift pricing: {months: price_rub}
-GIFT_PRICES = {
-    1: int(os.getenv("GIFT_PRICE_1M", "100")),
-    3: int(os.getenv("GIFT_PRICE_3M", "250")),
-    6: int(os.getenv("GIFT_PRICE_6M", "450")),
+# Subscription periods with volume discounts
+SUBSCRIPTION_PERIODS = {
+    1: {"months": 1, "days": 30, "discount": 0, "name": "1 месяц"},
+    3: {"months": 3, "days": 90, "discount": 10, "name": "3 месяца (-10%)"},
+    6: {"months": 6, "days": 180, "discount": 15, "name": "6 месяцев (-15%)"},
+    12: {"months": 12, "days": 365, "discount": 20, "name": "1 год (-20%)"},
 }
 
 # ==================== Trial ====================
+TRIAL_DURATION_DAYS = 1  # 24 hours
+TRIAL_MAX_DEVICES = 1
 TRIAL_ENABLED = os.getenv("TRIAL_ENABLED", "true").lower() == "true"
-TRIAL_HOURS = int(os.getenv("TRIAL_HOURS", "24"))
 
-# ==================== Referral ====================
-REFERRAL_BONUS_DAYS = int(os.getenv("REFERRAL_BONUS_DAYS", "3"))
+# ==================== Limits ====================
+MAX_CLIENTS_PER_USER = 5
 
 # ==================== Payments ====================
-# Yandex.Kassa / YooKassa
+# Yandex.Kassa / YooKassa (optional)
 YANDEX_KASSA_SHOP_ID = os.getenv("YANDEX_KASSA_SHOP_ID")
 YANDEX_KASSA_API_KEY = os.getenv("YANDEX_KASSA_API_KEY")
 YANDEX_KASSA_WEBHOOK_SECRET = os.getenv("YANDEX_KASSA_WEBHOOK_SECRET")
 
-# Legacy Telegram Payments
-PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN", None)
-
-# Crypto (USDT TRC20)
+# Crypto (USDT TRC20) - optional
 CRYPTO_WALLET_USDT = os.getenv("CRYPTO_WALLET_USDT", "")
 
 # ==================== Misc ====================
+DB_PATH = os.getenv("DB_PATH", "mnvpn.db")
+SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "mnvpn_support")
 APP_DOMAIN = os.getenv("APP_DOMAIN", "https://example.com")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 BANNER_PATH = os.path.join(os.path.dirname(__file__), "assets", "banner.png")
