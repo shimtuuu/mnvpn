@@ -16,7 +16,7 @@ from config import YANDEX_KASSA_SHOP_ID, YANDEX_KASSA_API_KEY, YANDEX_KASSA_WEBH
 from database import (
     add_payment, update_payment_status, get_payment, get_user,
     update_user_subscription, update_user_device_limit,
-    record_subscription_history
+    record_subscription_history, get_user_clients
 )
 
 logger = logging.getLogger(__name__)
@@ -137,6 +137,7 @@ class PaymentService:
         Process Yandex.Kassa webhook notification.
         
         Handles successful payments and updates user subscription.
+        When subscription is activated, ALL user devices are re-enabled in 3X-UI.
         
         Args:
             webhook_data: Parsed webhook JSON data
@@ -173,7 +174,7 @@ class PaymentService:
                 
                 # Activate subscription
                 if payment_type == "subscription":
-                    old_expiry = user[2]
+                    old_expiry = user.get('subscription_expiry')
                     new_expiry = (datetime.now() + timedelta(days=30)).isoformat()
                     await update_user_subscription(user_id, new_expiry)
                     await record_subscription_history(
@@ -183,11 +184,14 @@ class PaymentService:
                         new_expiry=new_expiry,
                         payment_id=internal_payment_id
                     )
-                    logger.info(f"Subscription activated for user {user_id}")
+                    logger.info(f"✅ Subscription activated for user {user_id} until {new_expiry}")
+                    
+                    # 🔄 REACTIVATE ALL DEVICES IN 3X-UI
+                    await self._reactivate_all_user_devices(user_id)
                 
                 # Add device/upgrade
                 elif payment_type == "device_upgrade":
-                    current_limit = user[3]
+                    current_limit = user.get('device_limit', 1)
                     new_limit = current_limit + 1
                     await update_user_device_limit(user_id, new_limit)
                     logger.info(f"Device limit increased to {new_limit} for user {user_id}")
@@ -207,8 +211,52 @@ class PaymentService:
                 return True
                 
         except Exception as e:
-            logger.error(f"Error processing webhook: {e}")
+            logger.error(f"Error processing webhook: {e}", exc_info=True)
             return False
+    
+    async def _reactivate_all_user_devices(self, user_id: int):
+        """
+        Reactivate all devices in 3X-UI after subscription payment.
+        
+        This ensures users who had expired subscription can immediately
+        use VPN on all their registered devices after renewal.
+        """
+        try:
+            from vpn_service import vpn_service
+            
+            # Get all devices for this user
+            devices = await get_user_clients(user_id)
+            
+            if not devices:
+                logger.info(f"User {user_id} has no devices to reactivate")
+                return
+            
+            # Enable each device in 3X-UI
+            reactivated_count = 0
+            for device in devices:
+                uuid = device.get('uuid')
+                device_name = device.get('device_name', 'Unknown')
+                
+                if uuid:
+                    enabled = await vpn_service.enable_client(uuid)
+                    if enabled:
+                        reactivated_count += 1
+                        logger.info(
+                            f"✅ Reactivated device '{device_name}' (UUID: {uuid}) "
+                            f"for user {user_id}"
+                        )
+                    else:
+                        logger.warning(
+                            f"⚠️ Failed to reactivate device '{device_name}' (UUID: {uuid}) "
+                            f"for user {user_id}"
+                        )
+            
+            logger.info(
+                f"💚 User {user_id}: reactivated {reactivated_count}/{len(devices)} devices after payment"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error reactivating devices for user {user_id}: {e}", exc_info=True)
     
     async def check_payment_status(self, payment_id: str) -> Optional[str]:
         """
