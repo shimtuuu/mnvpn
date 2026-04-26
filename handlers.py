@@ -35,6 +35,27 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
+# ==================== Helper Functions ====================
+
+async def reactivate_user_clients(user_id: int) -> int:
+    """Re-enable all user's clients after subscription renewal. Returns count of reactivated clients."""
+    devices = await get_user_devices(user_id)
+    reactivated = 0
+    
+    for device in devices:
+        client_uuid = device.get('uuid')
+        if client_uuid:
+            try:
+                success = await vpn_service.enable_client(client_uuid)
+                if success:
+                    reactivated += 1
+                    logger.info(f"Re-enabled client {client_uuid} for user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to re-enable client {client_uuid} for user {user_id}: {e}")
+    
+    return reactivated
+
+
 # ==================== Keyboards ====================
 
 def main_menu_kb() -> InlineKeyboardMarkup:
@@ -541,10 +562,15 @@ async def pay_card_subscription(callback: CallbackQuery):
     new_expiry = await extend_subscription(user_id, 30)
     await record_subscription_history(user_id, "test_payment_active", None, new_expiry)
     
+    # RE-ENABLE all user's clients after subscription renewal
+    reactivated = await reactivate_user_clients(user_id)
+    logger.info(f"Subscription renewed for user {user_id}, re-enabled {reactivated} clients")
+    
     await callback.message.answer(
         f"✅ <b>Тестовая оплата прошла успешно!</b>\n\n"
         f"💳 Режим заглушки: подписка активирована на 30 дней.\n"
-        f"📅 Новая дата: <code>{new_expiry[:10]}</code>\n\n"
+        f"📅 Новая дата: <code>{new_expiry[:10]}</code>\n"
+        f"🔓 Устройств активировано: <b>{reactivated}</b>\n\n"
         f"Теперь вы можете подключить ваше первое устройство 👇",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🚀 Подключить VPN", callback_data="connect_device")],
@@ -813,11 +839,16 @@ async def _process_gift_redeem(message: Message, gift_code: str):
     if success:
         new_expiry = await extend_subscription(user_id, gift['duration_days'])
         await record_subscription_history(user_id, "gift_redeemed", None, new_expiry)
+        
+        # RE-ENABLE all user's clients after gift redemption
+        reactivated = await reactivate_user_clients(user_id)
+        logger.info(f"Gift redeemed for user {user_id}, re-enabled {reactivated} clients")
 
         await message.answer(
             f"🎉 <b>Подарок активирован!</b>\n\n"
             f"📦 Добавлено: <b>{gift['duration_days']} дней</b>\n"
-            f"📅 Подписка до: <code>{new_expiry[:10]}</code>\n\n"
+            f"📅 Подписка до: <code>{new_expiry[:10]}</code>\n"
+            f"🔓 Устройств активировано: <b>{reactivated}</b>\n\n"
             f"Нажмите «Управление VPN» для подключения.",
             reply_markup=main_menu_kb(),
             parse_mode="HTML"
@@ -879,6 +910,9 @@ async def support(callback: CallbackQuery):
 
 # ==================== ℹ️ Информация ====================
 
+@router.callback_query(F.data == "info")
+async def info(callback: CallbackQuery):
+    await callback.answer()
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📲 Как подключиться?", callback_data="setup_general")],
         [InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back_menu")],
@@ -918,7 +952,7 @@ async def platform_setup(callback: CallbackQuery):
     await callback.answer()
     parts = callback.data.split("_")
     platform = parts[1]
-    device_id = parts[2]
+    device_id = parts[2] if len(parts) > 2 else "none"
     
     sub_link = None
     if device_id != "none":
