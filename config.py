@@ -54,8 +54,9 @@ VPN_DEVICE_PRICE = 100
 SUBSCRIPTION_DAYS = 30
 GIFT_PRICES = {1: 100, 3: 250, 6: 450}
 
-# ==================== Trial ====================
+# Trial
 TRIAL_DURATION_DAYS = 1  # 24 hours
+TRIAL_HOURS = 24
 TRIAL_MAX_DEVICES = 1
 TRIAL_ENABLED = os.getenv("TRIAL_ENABLED", "true").lower() == "true"
 
