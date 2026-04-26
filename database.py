@@ -28,6 +28,7 @@ async def init_db():
                 username TEXT,
                 subscription_expiry TEXT DEFAULT NULL,
                 device_limit INTEGER DEFAULT 1,
+                max_devices INTEGER DEFAULT 1,
                 uuid TEXT DEFAULT NULL,
                 sub_id TEXT DEFAULT NULL,
                 has_key BOOLEAN DEFAULT 0,
@@ -133,6 +134,7 @@ async def init_db():
             'referred_by': "ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL",
             'trial_used': "ALTER TABLE users ADD COLUMN trial_used BOOLEAN DEFAULT 0",
             'is_blocked': "ALTER TABLE users ADD COLUMN is_blocked BOOLEAN DEFAULT 0",
+            'max_devices': "ALTER TABLE users ADD COLUMN max_devices INTEGER DEFAULT 1",
         }
         for col, sql in migrations.items():
             if col not in columns:
@@ -183,27 +185,39 @@ async def update_user_subscription(user_id: int, expiry_date: str):
 
 
 async def extend_subscription(user_id: int, days: int):
-    """Extend subscription by N days from current expiry or now."""
+    """Extend subscription by N days from NOW (no accumulation like Ultima VPN)."""
     user = await get_user(user_id)
     if not user:
         return
 
-    current_expiry = user['subscription_expiry']
-    if current_expiry and is_sub_active_str(current_expiry):
-        base = datetime.fromisoformat(current_expiry)
-    else:
-        base = datetime.now()
-
-    new_expiry = (base + timedelta(days=days)).isoformat()
+    # IMPORTANT: Always start from NOW, period does NOT accumulate
+    new_expiry = (datetime.now() + timedelta(days=days)).isoformat()
     await update_user_subscription(user_id, new_expiry)
     return new_expiry
+
+
+async def purchase_subscription(user_id: int, devices: int, days: int):
+    """Purchase subscription with device limit and period (Ultima VPN model)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Period always starts from NOW, not accumulated
+        new_expiry = (datetime.now() + timedelta(days=days)).isoformat()
+        
+        await db.execute(
+            '''UPDATE users 
+               SET subscription_expiry = ?, max_devices = ?, device_limit = ?
+               WHERE user_id = ?''',
+            (new_expiry, devices, devices, user_id)
+        )
+        await db.commit()
+        logger.info(f"User {user_id} purchased {devices} devices for {days} days until {new_expiry}")
+        return new_expiry
 
 
 async def update_user_device_limit(user_id: int, limit: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            'UPDATE users SET device_limit = ? WHERE user_id = ?',
-            (limit, user_id)
+            'UPDATE users SET device_limit = ?, max_devices = ? WHERE user_id = ?',
+            (limit, limit, user_id)
         )
         await db.commit()
 
