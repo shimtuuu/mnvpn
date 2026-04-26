@@ -114,8 +114,10 @@ class VPNService:
 
         inbounds = await self.get_inbounds()
         if not inbounds:
-            logger.error("No inbounds found to add client")
+            logger.error(f"No inbounds found in 3X-UI for URL: {VPN_PANEL_URL}")
             return None
+
+        logger.info(f"Found {len(inbounds)} inbounds to process")
 
         add_url = f"{VPN_PANEL_URL}/panel/api/inbounds/addClient"
         success = False
@@ -127,8 +129,9 @@ class VPNService:
             inbound_id = inbound.get("id")
             protocol = inbound.get("protocol", "unknown")
             # 3X-UI requires globally unique email (Remark). 
-            # We append the inbound_id and protocol to ensure uniqueness.
-            unique_email = f"{email}_{protocol}_{inbound_id}"
+            # We use a clean alphanumeric string to avoid protocol errors.
+            safe_email = email.replace(" ", "_").replace("#", "").replace("(", "").replace(")", "")
+            unique_email = f"{safe_email}_{protocol}_{inbound_id}"
             
             # Make a copy of client_data with the unique email
             inbound_client_data = client_data.copy()
@@ -159,7 +162,10 @@ class VPNService:
                 logger.error(f"Exception adding client to inbound {inbound_id}: {e}")
 
         if success:
+            logger.info(f"Client {email} successfully added/verified in 3X-UI")
             return {"uuid": client_uuid, "sub_id": sub_id, "email": email}
+        
+        logger.error(f"Failed to add client {email} to any of the {len(inbounds)} inbounds")
         return None
 
     async def delete_client(self, client_uuid: str) -> bool:

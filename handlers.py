@@ -677,7 +677,11 @@ async def activate_trial(callback: CallbackQuery):
 
     if device_info:
         await update_user_xui_data(user_id, device_info["uuid"], device_info["sub_id"])
-        await loading_msg.delete()
+        # No need to delete loading message if we're answering with a new one
+        try:
+            await callback.message.delete()
+        except:
+            pass
 
         # Build keyboard - UltimaVPN Style
         kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -716,7 +720,10 @@ async def activate_trial(callback: CallbackQuery):
                 parse_mode="HTML"
             )
     else:
-        await loading_msg.edit_text("❌ Ошибка активации. Попробуйте позже.")
+        try:
+            await callback.message.edit_text("❌ Ошибка активации. Попробуйте позже.")
+        except:
+            pass
 
 
 # ==================== 🎁 Подарить VPN ====================

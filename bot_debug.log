@@ -1,0 +1,13 @@
+INFO:__main__:Starting MNVPN Bot...
+INFO:database:Database initialized with all tables.
+INFO:__main__:Database initialized
+WARNING:__main__:Payment service credentials not configured
+INFO:vpn_service:Successfully logged into 3X-UI
+INFO:__main__:Connected to 3X-UI panel
+INFO:__main__:Background tasks started
+INFO:__main__:Starting polling...
+INFO:aiogram.dispatcher:Start polling
+INFO:aiogram.dispatcher:Run polling for bot @minvpnbotbot id=8388484760 - 'minvpn'
+WARNING:aiogram.dispatcher:Received SIGTERM signal
+INFO:aiogram.dispatcher:Polling stopped for bot @minvpnbotbot id=8388484760 - 'minvpn'
+INFO:aiogram.dispatcher:Polling stopped
