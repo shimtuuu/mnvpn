@@ -253,9 +253,8 @@ async def connect_device(callback: CallbackQuery):
             await callback.message.edit_text("❌ Ошибка при создании конфигурации. Попробуйте позже.")
             return
 
-        # Build keyboard - UltimaVPN Style
+        # Build keyboard - QR Style (removed Happ button as requested)
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🚀 ПОДКЛЮЧИТЬ (HAPP VPN)", url=device_info["happ_link"])],
             [
                 InlineKeyboardButton(text="🍎 iOS", callback_data=f"setup_ios_{device_info['device_id']}"),
                 InlineKeyboardButton(text="🤖 Android", callback_data=f"setup_android_{device_info['device_id']}"),
@@ -277,13 +276,27 @@ async def connect_device(callback: CallbackQuery):
             f"🔒 Протоколы: <b>VLESS, VMess, Trojan, Shadowsocks</b>\n"
             f"📅 Активен до: <b>{user['subscription_expiry'][:10]}</b>\n"
             "━━━━━━━━━━━━━━━━━\n\n"
-            "🔹 <b>Самый простой способ:</b>\n"
-            "Нажмите кнопку <b>ПОДКЛЮЧИТЬ</b> выше — Happ VPN откроется и добавит настройки автоматически.\n\n"
+            "📷 <b>Сканируйте QR-код выше</b> в приложении Happ / V2rayNG / FoXray для быстрого подключения.\n\n"
             "🔹 <b>Для других приложений:</b>\n"
             "Выберите вашу платформу ниже для просмотра инструкции."
         )
 
-        await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+        # Delete loading message and send photo with QR
+        try:
+            await callback.message.delete()
+        except:
+            pass
+        
+        if device_info.get("qr_code"):
+            qr_file = BufferedInputFile(device_info["qr_code"], filename="vpn_qr.png")
+            await callback.message.answer_photo(
+                photo=qr_file,
+                caption=text,
+                reply_markup=kb,
+                parse_mode="HTML"
+            )
+        else:
+            await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
 
     except Exception as e:
         logger.error(f"Error generating key for user {user_id}: {e}")
@@ -683,9 +696,8 @@ async def activate_trial(callback: CallbackQuery):
         except:
             pass
 
-        # Build keyboard - UltimaVPN Style
+        # Build keyboard - QR Style (removed Happ button)
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🚀 ПОДКЛЮЧИТЬ (HAPP VPN)", url=device_info["happ_link"])],
             [
                 InlineKeyboardButton(text="🍎 iOS", callback_data=f"setup_ios_{device_info['device_id']}"),
                 InlineKeyboardButton(text="🤖 Android", callback_data=f"setup_android_{device_info['device_id']}"),
@@ -706,19 +718,20 @@ async def activate_trial(callback: CallbackQuery):
             f"🔒 Протоколы: <b>VLESS, VMess, Trojan, Shadowsocks</b>\n"
             f"⏰ Действует до: <b>{trial_expiry[:16].replace('T', ' ')}</b>\n"
             "━━━━━━━━━━━━━━━━━\n\n"
-            "🔹 <b>Нажмите кнопку ПОДКЛЮЧИТЬ</b> выше для автоматической настройки Happ VPN.\n\n"
+            "📷 <b>Сканируйте QR-код выше</b> камерой вашего VPN-приложения для мгновенной настройки.\n\n"
             "🔹 Или выберите вашу платформу для ручной настройки."
         )
-
-        await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
 
         if device_info.get("qr_code"):
             qr_file = BufferedInputFile(device_info["qr_code"], filename="trial_qr.png")
             await callback.message.answer_photo(
                 photo=qr_file, 
-                caption="📷 <b>QR-код для импорта</b>\nСканируйте его камерой вашего VPN-приложения.",
+                caption=text,
+                reply_markup=kb,
                 parse_mode="HTML"
             )
+        else:
+            await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
     else:
         try:
             await callback.message.edit_text("❌ Ошибка активации. Попробуйте позже.")
