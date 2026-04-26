@@ -9,7 +9,7 @@ import os
 from aiogram import Router, F, Bot
 from aiogram.types import (
     Message, CallbackQuery, BufferedInputFile, FSInputFile,
-    InlineKeyboardButton, InlineKeyboardMarkup
+    InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, PreCheckoutQuery
 )
 from aiogram.filters import Command, CommandStart
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -21,14 +21,15 @@ from database import (
     has_used_trial, mark_trial_used, create_gift, get_gift_by_code,
     redeem_gift, add_referral, apply_referral_bonus, get_referral_stats,
     get_user_referral_code, is_sub_active_str, deactivate_device,
-    record_subscription_history
+    record_subscription_history, purchase_subscription, get_user_clients
 )
 from vpn_service import vpn_service
 from payment_service import get_payment_service
 from config import (
     VPN_SUBSCRIPTION_PRICE, VPN_DEVICE_PRICE, SUBSCRIPTION_DAYS,
     GIFT_PRICES, TRIAL_ENABLED, TRIAL_HOURS, REFERRAL_BONUS_DAYS,
-    SUPPORT_USERNAME, BANNER_PATH, CRYPTO_WALLET_USDT
+    SUPPORT_USERNAME, BANNER_PATH, CRYPTO_WALLET_USDT,
+    DEVICE_PLANS, SUBSCRIPTION_PERIODS
 )
 
 logger = logging.getLogger(__name__)
@@ -521,35 +522,200 @@ async def delete_device_exec(callback: CallbackQuery):
 
 # ==================== 💳 Покупка / Продление ====================
 
+# ==================== 💳 Покупка / Продление (Ultima Style) ====================
+
 @router.callback_query(F.data == "buy_sub")
 @router.callback_query(F.data == "renew_sub")
-async def buy_subscription(callback: CallbackQuery):
+@router.callback_query(F.data == "buy_subscription")
+async def choose_device_count(callback: CallbackQuery):
     await callback.answer()
+    keyboard = []
+    for device_count, plan in DEVICE_PLANS.items():
+        keyboard.append([InlineKeyboardButton(
+            text=f"{plan['name']} — от {plan['price_per_month_rub']}₽/мес",
+            callback_data=f"devices_{device_count}"
+        )])
+    keyboard.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="manage_vpn")])
+    
+    await callback.message.edit_text(
+        "📱 <b>Выберите количество устройств:</b>\n\n"
+        "Цена указана за 1 месяц.\n"
+        "При покупке на 3+ месяца — скидка до 20%!",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard),
+        parse_mode="HTML"
+    )
 
-    buttons = []
-
-    # Card payment (Stub mode is active)
-    buttons.append([InlineKeyboardButton(text="💳 Картой", callback_data="pay_card_sub")])
-
-    # Crypto payment
-    if CRYPTO_WALLET_USDT:
-        buttons.append([InlineKeyboardButton(text="💎 Крипто (USDT)", callback_data="pay_crypto_sub")])
-
-    if not buttons:
-        await callback.message.answer(
-            "❌ Способы оплаты не настроены. Обратитесь в поддержку.",
-            reply_markup=back_to_menu_kb()
-        )
+@router.callback_query(F.data.startswith("devices_"))
+async def choose_period(callback: CallbackQuery):
+    await callback.answer()
+    device_count = int(callback.data.replace("devices_", ""))
+    device_plan = DEVICE_PLANS.get(device_count)
+    if not device_plan:
+        await callback.answer("❌ Тариф не найден")
         return
+        
+    keyboard = []
+    for period_months, period_data in SUBSCRIPTION_PERIODS.items():
+        # Calculate price with discount
+        base_price_rub = device_plan['price_per_month_rub'] * period_data['months']
+        discount = period_data['discount']
+        final_price_rub = int(base_price_rub * (1 - discount / 100))
+        
+        button_text = f"{period_data['name']} — {final_price_rub}₽"
+        keyboard.append([InlineKeyboardButton(
+            text=button_text,
+            callback_data=f"period_{device_count}_{period_months}"
+        )])
+        
+    keyboard.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_subscription")])
+    
+    await callback.message.edit_text(
+        f"📅 <b>Выберите период подписки</b>\n\n"
+        f"Тариф: <b>{device_plan['name']}</b>\n"
+        f"Базовая цена: {device_plan['price_per_month_rub']}₽/мес\n"
+        f"<i>Чем дольше период — тем больше скидка!</i>",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard),
+        parse_mode="HTML"
+    )
 
-    buttons.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="manage_vpn")])
-
-    await callback.message.answer(
-        f"💰 <b>Подписка MNVPN</b>\n\n"
-        f"📦 Период: {SUBSCRIPTION_DAYS} дней\n"
-        f"💵 Стоимость: <b>{int(VPN_SUBSCRIPTION_PRICE)}₽</b>\n\n"
+@router.callback_query(F.data.startswith("period_"))
+async def choose_payment_method(callback: CallbackQuery):
+    await callback.answer()
+    parts = callback.data.replace("period_", "").split("_")
+    device_count = int(parts[0])
+    period_months = int(parts[1])
+    
+    device_plan = DEVICE_PLANS.get(device_count)
+    period_data = SUBSCRIPTION_PERIODS.get(period_months)
+    
+    if not device_plan or not period_data:
+        await callback.answer("❌ Тариф не найден")
+        return
+        
+    # Calculate final prices
+    base_price_rub = device_plan['price_per_month_rub'] * period_data['months']
+    base_price_stars = device_plan['price_per_month_stars'] * period_data['months']
+    discount = period_data['discount']
+    
+    final_price_rub = int(base_price_rub * (1 - discount / 100))
+    final_price_stars = int(base_price_stars * (1 - discount / 100))
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text=f"⭐ Оплатить Stars ({final_price_stars} ⭐)",
+            callback_data=f"pay_stars_{device_count}_{period_months}"
+        )],
+        [InlineKeyboardButton(
+            text=f"💳 Оплатить картой ({final_price_rub} ₽)",
+            callback_data=f"pay_card_{device_count}_{period_months}"
+        )],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"devices_{device_count}")]
+    ])
+    
+    discount_text = f"\n🔥 Скидка: <b>{discount}%</b>" if discount > 0 else ""
+    
+    await callback.message.edit_text(
+        f"💳 <b>Оформление подписки</b>\n\n"
+        f"Устройств: <b>{device_count}</b>\n"
+        f"Период: <b>{period_data['name']}</b>{discount_text}\n\n"
+        f"К оплате:\n"
+        f" • <b>{final_price_stars} ⭐ Stars</b>\n"
+        f" • <b>{final_price_rub} ₽ (карта)</b>\n\n"
         f"Выберите способ оплаты:",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+
+# --- Payment Handlers ---
+
+@router.callback_query(F.data.startswith("pay_stars_"))
+async def pay_with_stars(callback: CallbackQuery, bot: Bot):
+    await callback.answer()
+    parts = callback.data.replace("pay_stars_", "").split("_")
+    device_count = int(parts[0])
+    period_months = int(parts[1])
+    
+    device_plan = DEVICE_PLANS.get(device_count)
+    period_data = SUBSCRIPTION_PERIODS.get(period_months)
+    
+    if not device_plan or not period_data:
+        await callback.answer("❌ Тариф не найден")
+        return
+        
+    # Calculate stars price
+    base_price_stars = device_plan['price_per_month_stars'] * period_data['months']
+    discount = period_data['discount']
+    final_price_stars = int(base_price_stars * (1 - discount / 100))
+    
+    # Send invoice
+    prices = [LabeledPrice(label=f"{device_plan['name']}, {period_data['name']}", amount=final_price_stars)]
+    
+    await bot.send_invoice(
+        chat_id=callback.from_user.id,
+        title=f"VPN — {device_plan['name']}",
+        description=f"Подписка на {period_data['months']} мес. для {device_count} устройств",
+        payload=f"sub_{device_count}_{period_data['days']}_{callback.from_user.id}",
+        currency="XTR",
+        prices=prices,
+        provider_token="" # Stars don't need a provider token
+    )
+    await callback.answer("⭐ Счёт отправлен!")
+
+@router.callback_query(F.data.startswith("pay_card_"))
+async def pay_with_card(callback: CallbackQuery):
+    await callback.answer()
+    parts = callback.data.replace("pay_card_", "").split("_")
+    device_count = int(parts[0])
+    period_months = int(parts[1])
+    
+    period_data = SUBSCRIPTION_PERIODS.get(period_months)
+    if not period_data:
+        await callback.answer("❌ Тариф не найден")
+        return
+        
+    user_id = callback.from_user.id
+    
+    # Mock successful payment for test
+    new_expiry = await purchase_subscription(user_id, device_count, period_data['days'])
+    enabled_count = await reactivate_user_clients(user_id)
+    
+    await callback.message.answer(
+        f"✅ <b>Тестовая оплата прошла успешно!</b>\n\n"
+        f"📱 Устройств в тарифе: <b>{device_count}</b>\n"
+        f"📅 Подписка на {period_data['months']} мес. ({period_data['days']} дней)\n"
+        f"🚀 Активировано устройств: <b>{enabled_count}</b>\n\n"
+        f"⏳ Подписка до: <code>{new_expiry[:10]}</code>",
+        reply_markup=back_to_menu_kb(),
+        parse_mode="HTML"
+    )
+
+@router.pre_checkout_query()
+async def pre_checkout_handler(pre_checkout_query: PreCheckoutQuery):
+    await pre_checkout_query.answer(ok=True)
+
+@router.message(F.successful_payment)
+async def successful_payment(message: Message):
+    payload = message.successful_payment.invoice_payload
+    # Format: "sub_{device_count}_{days}_{user_id}"
+    parts = payload.split("_")
+    if len(parts) != 4 or parts[0] != "sub":
+        await message.answer("❌ Ошибка обработки платежа")
+        return
+        
+    device_count = int(parts[1])
+    days = int(parts[2])
+    user_id = int(parts[3])
+    
+    new_expiry = await purchase_subscription(user_id, device_count, days)
+    enabled_count = await reactivate_user_clients(user_id)
+    
+    await message.answer(
+        f"✅ <b>Оплата прошла успешно!</b>\n\n"
+        f"⭐ Списано: <b>{message.successful_payment.total_amount} ⭐ Stars</b>\n"
+        f"📱 Устройств в тарифе: <b>{device_count}</b>\n"
+        f"📅 Подписка продлена на <b>{days}</b> дней\n"
+        f"🚀 Активировано устройств: <b>{enabled_count}</b>\n\n"
+        f"⏳ Подписка до: <code>{new_expiry[:10]}</code>",
         parse_mode="HTML"
     )
 
