@@ -200,6 +200,58 @@ class VPNService:
         logger.error(f"Failed to add client {email} to any of the {len(inbounds)} inbounds")
         return None
 
+    async def enable_client(self, client_uuid: str) -> bool:
+        """Enable a client across all inbounds (for subscription reactivation)."""
+        await self._ensure_logged_in()
+        session = await self._get_session()
+        inbounds = await self.get_inbounds()
+        if not inbounds:
+            return False
+
+        success = False
+        for inbound in inbounds:
+            inbound_id = inbound.get("id")
+            url = f"{VPN_PANEL_URL}/panel/api/inbounds/{inbound_id}/{client_uuid}/setEnable"
+            payload = {"id": inbound_id, "uuid": client_uuid, "enable": True}
+
+            try:
+                async with session.post(url, json=payload) as resp:
+                    if resp.status == 200:
+                        result = await resp.json()
+                        if result.get("success"):
+                            logger.info(f"Client {client_uuid} enabled in inbound {inbound_id}")
+                            success = True
+            except Exception as e:
+                logger.error(f"Error enabling client {client_uuid} in inbound {inbound_id}: {e}")
+
+        return success
+
+    async def disable_client(self, client_uuid: str) -> bool:
+        """Disable a client across all inbounds (for expired subscriptions)."""
+        await self._ensure_logged_in()
+        session = await self._get_session()
+        inbounds = await self.get_inbounds()
+        if not inbounds:
+            return False
+
+        success = False
+        for inbound in inbounds:
+            inbound_id = inbound.get("id")
+            url = f"{VPN_PANEL_URL}/panel/api/inbounds/{inbound_id}/{client_uuid}/setEnable"
+            payload = {"id": inbound_id, "uuid": client_uuid, "enable": False}
+
+            try:
+                async with session.post(url, json=payload) as resp:
+                    if resp.status == 200:
+                        result = await resp.json()
+                        if result.get("success"):
+                            logger.info(f"Client {client_uuid} disabled in inbound {inbound_id}")
+                            success = True
+            except Exception as e:
+                logger.error(f"Error disabling client {client_uuid} in inbound {inbound_id}: {e}")
+
+        return success
+
     async def delete_client(self, client_uuid: str) -> bool:
         """Delete a client from all 3X-UI inbounds."""
         await self._ensure_logged_in()
