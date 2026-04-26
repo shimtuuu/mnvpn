@@ -26,19 +26,24 @@ REALITY_SHORT_ID = "0c539e1b54f35027"
 
 logger = logging.getLogger(__name__)
 
+MAX_RETRIES = 3
+RETRY_DELAY = 2.0  # seconds between retries
+
 
 class VPNService:
     def __init__(self):
         self.session: Optional[aiohttp.ClientSession] = None
         self.cookie_jar = aiohttp.CookieJar(unsafe=True)
+        self._logged_in = False
 
     async def _get_session(self) -> aiohttp.ClientSession:
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
                 cookie_jar=self.cookie_jar,
                 connector=aiohttp.TCPConnector(ssl=False),
-                timeout=aiohttp.ClientTimeout(total=10)
+                timeout=aiohttp.ClientTimeout(total=30)  # increased from 10s
             )
+            self._logged_in = False
         return self.session
 
     async def close(self):
@@ -52,37 +57,68 @@ class VPNService:
         login_url = f"{VPN_PANEL_URL}/login"
         data = {"username": VPN_PANEL_USERNAME, "password": VPN_PANEL_PASSWORD}
 
-        try:
-            async with session.post(login_url, data=data) as resp:
-                if resp.status == 200:
-                    json_data = await resp.json()
-                    if json_data.get("success"):
-                        logger.info("Successfully logged into 3X-UI")
-                        return True
-                logger.error(f"Failed to login to 3X-UI: {await resp.text()}")
-                return False
-        except Exception as e:
-            logger.error(f"Error during 3X-UI login: {e}")
-            return False
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                async with session.post(login_url, data=data) as resp:
+                    if resp.status == 200:
+                        json_data = await resp.json()
+                        if json_data.get("success"):
+                            logger.info("Successfully logged into 3X-UI")
+                            self._logged_in = True
+                            return True
+                    logger.warning(f"Login attempt {attempt}/{MAX_RETRIES} failed: {resp.status}")
+            except Exception as e:
+                logger.warning(f"Login attempt {attempt}/{MAX_RETRIES} error: {e}")
+
+            if attempt < MAX_RETRIES:
+                await asyncio.sleep(RETRY_DELAY)
+
+        logger.error("All login attempts to 3X-UI failed")
+        self._logged_in = False
+        return False
 
     async def _ensure_logged_in(self):
-        """Minimal session check. Reliability through exception handling."""
+        """Ensure we have an active authenticated session, re-login if needed."""
         if self.session is None or self.session.closed:
+            self._logged_in = False
+
+        if not self._logged_in:
             await self.login_3xui()
 
     async def get_inbounds(self) -> List[dict]:
-        """Fetch all inbounds from 3X-UI."""
-        await self._ensure_logged_in()
-        session = await self._get_session()
-        try:
-            url = f"{VPN_PANEL_URL}/panel/api/inbounds/list"
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    if data.get("success"):
-                        return data.get("obj", [])
-        except Exception as e:
-            logger.error(f"Error getting inbounds: {e}")
+        """Fetch all inbounds from 3X-UI with retry logic."""
+        for attempt in range(1, MAX_RETRIES + 1):
+            await self._ensure_logged_in()
+            session = await self._get_session()
+            try:
+                url = f"{VPN_PANEL_URL}/panel/api/inbounds/list"
+                async with session.get(url) as resp:
+                    if resp.status == 401:
+                        # Session expired — force re-login on next attempt
+                        logger.warning(f"get_inbounds attempt {attempt}: session expired, re-logging in...")
+                        self._logged_in = False
+                        await asyncio.sleep(RETRY_DELAY)
+                        continue
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if data.get("success"):
+                            inbounds = data.get("obj", [])
+                            if inbounds:
+                                logger.info(f"get_inbounds attempt {attempt}: got {len(inbounds)} inbounds")
+                                return inbounds
+                            logger.warning(f"get_inbounds attempt {attempt}: empty inbounds list")
+                        else:
+                            logger.warning(f"get_inbounds attempt {attempt}: success=false, re-logging in...")
+                            self._logged_in = False
+                    else:
+                        logger.warning(f"get_inbounds attempt {attempt}: HTTP {resp.status}")
+            except Exception as e:
+                logger.warning(f"get_inbounds attempt {attempt}/{MAX_RETRIES} error: {e}")
+
+            if attempt < MAX_RETRIES:
+                await asyncio.sleep(RETRY_DELAY)
+
+        logger.error(f"Failed to get inbounds after {MAX_RETRIES} attempts")
         return []
 
     # ==================== Client CRUD ====================
@@ -95,13 +131,12 @@ class VPNService:
         session = await self._get_session()
 
         client_uuid = client_uuid or str(uuid.uuid4())
-        # Используем имя устройства как Remark в панели (чистим от спецсимволов)
         email = device_name or f"{username}_{user_id}_{client_uuid[:4]}"
         sub_id = sub_id or client_uuid[:16].replace("-", "")
 
         client_data = {
             "id": client_uuid,
-            "password": client_uuid,  # Used by Trojan and Shadowsocks
+            "password": client_uuid,
             "alterId": 0,
             "email": email,
             "limitIp": limit_ip,
@@ -128,12 +163,9 @@ class VPNService:
 
             inbound_id = inbound.get("id")
             protocol = inbound.get("protocol", "unknown")
-            # 3X-UI requires globally unique email (Remark). 
-            # We use a clean alphanumeric string to avoid protocol errors.
             safe_email = email.replace(" ", "_").replace("#", "").replace("(", "").replace(")", "")
             unique_email = f"{safe_email}_{protocol}_{inbound_id}"
-            
-            # Make a copy of client_data with the unique email
+
             inbound_client_data = client_data.copy()
             inbound_client_data["email"] = unique_email
 
@@ -164,7 +196,7 @@ class VPNService:
         if success:
             logger.info(f"Client {email} successfully added/verified in 3X-UI")
             return {"uuid": client_uuid, "sub_id": sub_id, "email": email}
-        
+
         logger.error(f"Failed to add client {email} to any of the {len(inbounds)} inbounds")
         return None
 
@@ -215,8 +247,8 @@ class VPNService:
                     enable = enable or stat.get('enable', False)
 
         return {
-            "up": up, 
-            "down": down, 
+            "up": up,
+            "down": down,
             "total": total,
             "enable": enable
         }
@@ -247,7 +279,6 @@ class VPNService:
     def generate_happ_deeplink(self, sub_id: str, name: str = "MNVPN") -> str:
         """Generate Happ deep link with happ:// scheme."""
         sub_url = self.generate_subscription_link(sub_id, name)
-        # Убеждаемся, что имя в ссылке уникально для приложения
         clean_name = name.replace(" ", "_").replace("#", "N")
         deep_link = f"happ://add/{sub_url}#{clean_name}"
         wrapped = f"https://happ.click/?url={deep_link}"
@@ -255,12 +286,11 @@ class VPNService:
 
     def generate_vless_link(self, client_uuid: str, name: str = "MNVPN") -> str:
         """Generate a raw vless:// link for manual import/QR."""
-        # Reality parameters fetched from panel
         pbk = "Dodq32f0P7YVGHkvdI-njibzKlibaShzqkBrglCDEyA"
         sid = "0c539e1b54f35027"
         sni = "www.microsoft.com"
         clean_name = name.replace(" ", "_").replace("#", "N")
-        
+
         vless = (
             f"vless://{client_uuid}@{SERVER_DOMAIN}:443?"
             f"encryption=none&security=reality&sni={sni}&"
@@ -314,7 +344,6 @@ class VPNService:
             qr.add_data(data)
             qr.make(fit=True)
 
-            # Brand colors: deep purple fill on white
             img = qr.make_image(fill_color="#4B0082", back_color="white")
             img_bytes = BytesIO()
             img.save(img_bytes, format='PNG')
@@ -353,8 +382,7 @@ class VPNService:
         sub_link = self.generate_subscription_link(xui_data["sub_id"], device_name)
         vless_link = self.generate_vless_link(xui_data["uuid"], device_name)
         happ_link = self.generate_happ_deeplink(xui_data["sub_id"], device_name)
-        
-        # QR code now contains the raw VLESS link for instant setup
+
         qr_code_bytes = self.generate_qr_code(vless_link)
         config_bytes = self.generate_config_file(xui_data["uuid"], xui_data["sub_id"])
 
