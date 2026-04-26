@@ -15,82 +15,82 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-print_ok()   { echo -e "${GREEN}[✓]${NC} $1"; }
+print_ok()   { echo -e "${GREEN}[\u2713]${NC} $1"; }
 print_info() { echo -e "${YELLOW}[i]${NC} $1"; }
-print_err()  { echo -e "${RED}[✗]${NC} $1"; }
+print_err()  { echo -e "${RED}[\u2717]${NC} $1"; }
 
 echo ""
-echo "╔══════════════════════════════════════════╗"
-echo "║     MNVPN — Безопасное обновление        ║"
-echo "╚══════════════════════════════════════════╝"
+echo "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557"
+echo "\u2551     MNVPN \u2014 \u0411\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0435 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435        \u2551"
+echo "\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d"
 echo ""
 
-# 1. Бэкап .env
+# 1. \u0411\u044d\u043a\u0430\u043f .env (\u0435\u0441\u043b\u0438 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442)
 if [ -f "$MNVPN_DIR/.env" ]; then
     cp "$MNVPN_DIR/.env" "$ENV_BACKUP"
-    print_ok ".env сохранён в $ENV_BACKUP"
+    print_ok ".env \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u0432 $ENV_BACKUP"
 else
-    print_info ".env не найден — после обновления создайте его вручную из .env.example"
+    print_info ".env \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d \u2014 \u043f\u043e\u0441\u043b\u0435 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f \u0441\u043e\u0437\u0434\u0430\u0439\u0442\u0435 \u0435\u0433\u043e \u0438\u0437 .env.example"
 fi
 
-# 2. Обновление файлов
+# 2. \u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u0444\u0430\u0439\u043b\u043e\u0432
 if [ -d "$MNVPN_DIR/.git" ]; then
-    print_info "Репозиторий уже склонирован — выполняем git fetch + reset..."
+    print_info "\u0420\u0435\u043f\u043e\u0437\u0438\u0442\u043e\u0440\u0438\u0439 \u0443\u0436\u0435 \u0435\u0441\u0442\u044c \u2014 \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u0435\u043c git fetch + reset..."
     cd "$MNVPN_DIR"
     git fetch origin main
     git reset --hard origin/main
-    print_ok "Файлы обновлены с GitHub"
+    print_ok "\u0424\u0430\u0439\u043b\u044b \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u044b \u0441 GitHub"
 else
-    print_info "Репозиторий не найден — клонируем..."
-    rm -rf "$MNVPN_DIR"
+    print_info "\u041f\u0430\u043f\u043a\u0430 $MNVPN_DIR \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u0430 \u2014 \u043a\u043b\u043e\u043d\u0438\u0440\u0443\u0435\u043c..."
+    mkdir -p /opt
     git clone "$REPO_URL" "$MNVPN_DIR"
-    print_ok "Репозиторий склонирован в $MNVPN_DIR"
+    print_ok "\u0420\u0435\u043f\u043e\u0437\u0438\u0442\u043e\u0440\u0438\u0439 \u0441\u043a\u043b\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d \u0432 $MNVPN_DIR"
 fi
 
-# 3. Восстановление .env
+# 3. \u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 .env
 if [ -f "$ENV_BACKUP" ]; then
     cp "$ENV_BACKUP" "$MNVPN_DIR/.env"
-    print_ok ".env восстановлен — токен бота не изменён"
+    print_ok ".env \u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u2014 \u0442\u043e\u043a\u0435\u043d \u0431\u043e\u0442\u0430 \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u0451\u043d"
 else
-    print_info "Создайте .env:"
+    print_info "\u0421\u043e\u0437\u0434\u0430\u0439\u0442\u0435 .env:"
     print_info "  cp $MNVPN_DIR/.env.example $MNVPN_DIR/.env"
     print_info "  nano $MNVPN_DIR/.env"
 fi
 
-# 4. Установка/обновление зависимостей
+# 4. \u0423\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u0437\u0430\u0432\u0438\u0441\u0438\u043c\u043e\u0441\u0442\u0435\u0439
 cd "$MNVPN_DIR"
 if [ -d ".venv" ]; then
-    print_info "Обновляем зависимости..."
+    print_info "\u041e\u0431\u043d\u043e\u0432\u043b\u044f\u0435\u043c \u0437\u0430\u0432\u0438\u0441\u0438\u043c\u043e\u0441\u0442\u0438..."
     .venv/bin/pip install -q -r requirements.txt
-    print_ok "Зависимости обновлены"
+    print_ok "\u0417\u0430\u0432\u0438\u0441\u0438\u043c\u043e\u0441\u0442\u0438 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u044b"
 else
-    print_info "Виртуальное окружение не найдено, создаём..."
+    print_info "\u0421\u043e\u0437\u0434\u0430\u0451\u043c \u0432\u0438\u0440\u0442\u0443\u0430\u043b\u044c\u043d\u043e\u0435 \u043e\u043a\u0440\u0443\u0436\u0435\u043d\u0438\u0435..."
     python3 -m venv .venv
     .venv/bin/pip install -q --upgrade pip
     .venv/bin/pip install -q -r requirements.txt
-    print_ok "Виртуальное окружение создано и зависимости установлены"
+    print_ok "\u0412\u0438\u0440\u0442\u0443\u0430\u043b\u044c\u043d\u043e\u0435 \u043e\u043a\u0440\u0443\u0436\u0435\u043d\u0438\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u043e \u0438 \u0437\u0430\u0432\u0438\u0441\u0438\u043c\u043e\u0441\u0442\u0438 \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u044b"
 fi
 
-# 5. Перезапуск бота (если сервис существует)
+# 5. \u041f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u043a \u0431\u043e\u0442\u0430
 if systemctl list-units --type=service 2>/dev/null | grep -q "mnvpn-bot"; then
     systemctl restart mnvpn-bot.service
     sleep 2
     if systemctl is-active --quiet mnvpn-bot.service; then
-        print_ok "Бот перезапущен и работает"
+        print_ok "\u0411\u043e\u0442 \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0449\u0435\u043d \u0438 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442"
     else
-        print_err "Бот не запустился. Проверьте логи:"
+        print_err "\u0411\u043e\u0442 \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u043b\u0441\u044f. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043b\u043e\u0433\u0438:"
         echo "  journalctl -u mnvpn-bot.service -n 30"
     fi
 else
-    print_info "Systemd-сервис mnvpn-bot не найден. Запустите бота вручную:"
+    print_info "Systemd-\u0441\u0435\u0440\u0432\u0438\u0441 mnvpn-bot \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d. \u0417\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0435 \u0431\u043e\u0442\u0430 \u0432\u0440\u0443\u0447\u043d\u0443\u044e:"
     print_info "  cd $MNVPN_DIR && .venv/bin/python3 bot.py"
 fi
 
 echo ""
-print_ok "Обновление завершено!"
+print_ok "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u043e!"
 echo ""
-echo "📋 Полезные команды:"
-echo "  Логи бота:       journalctl -u mnvpn-bot.service -f"
-echo "  Статус сервиса:  systemctl status mnvpn-bot.service"
-echo "  Перезапуск:      systemctl restart mnvpn-bot.service"
+echo "\ud83d\udccb \u041f\u043e\u043b\u0435\u0437\u043d\u044b\u0435 \u043a\u043e\u043c\u0430\u043d\u0434\u044b:"
+echo "  \u041b\u043e\u0433\u0438 \u0431\u043e\u0442\u0430:       journalctl -u mnvpn-bot.service -f"
+echo "  \u0421\u0442\u0430\u0442\u0443\u0441 \u0441\u0435\u0440\u0432\u0438\u0441\u0430:  systemctl status mnvpn-bot.service"
+echo "  \u041f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u043a:      systemctl restart mnvpn-bot.service"
 echo ""
