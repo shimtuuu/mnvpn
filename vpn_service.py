@@ -329,11 +329,12 @@ class VPNService:
         return sub_url
 
     def generate_happ_deeplink(self, sub_id: str, name: str = "MNVPN") -> str:
-        """Generate Happ deep link with happ:// scheme."""
+        """Generate Happ deep link with happ:// scheme via MNVPN redirect."""
         sub_url = self.generate_subscription_link(sub_id, name)
         clean_name = name.replace(" ", "_").replace("#", "N")
         deep_link = f"happ://add/{sub_url}#{clean_name}"
-        wrapped = f"https://happ.click/?url={deep_link}"
+        # Use our own redirect service on the server
+        wrapped = f"https://{SERVER_DOMAIN}:8000/r?url={deep_link}"
         return wrapped
 
     def generate_vless_link(self, client_uuid: str, name: str = "MNVPN") -> str:

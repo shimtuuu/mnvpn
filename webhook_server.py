@@ -7,7 +7,7 @@ and updates the database and sends notifications to users via Telegram.
 
 import logging
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 import json
 from typing import Optional
 
@@ -126,6 +126,103 @@ async def handle_payment_webhook(request: Request):
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok"}
+
+
+@app.get("/r")
+async def happ_redirect(request: Request):
+    """
+    MNVPN deep link redirector for Happ VPN client.
+    
+    Usage: /r?url=happ://add/<subscription_url>#MNVPN
+    When user clicks this link:
+    - If Happ is installed → opens Happ and adds the subscription
+    - If Happ is not installed → shows a branded page with download links
+    """
+    url = request.query_params.get("url")
+    if not url:
+        return JSONResponse({"error": "Missing 'url' parameter"}, status_code=400)
+    
+    # Return an HTML page that tries to open the deep link,
+    # with a fallback for users who don't have Happ installed
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>MNVPN — Подключение</title>
+        <meta http-equiv="refresh" content="0;url={url}">
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+                color: #fff;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                padding: 20px;
+            }}
+            .card {{
+                background: rgba(255,255,255,0.08);
+                backdrop-filter: blur(20px);
+                border-radius: 24px;
+                padding: 40px 30px;
+                max-width: 400px;
+                width: 100%;
+                border: 1px solid rgba(255,255,255,0.1);
+            }}
+            .logo {{ font-size: 48px; margin-bottom: 16px; }}
+            h1 {{ font-size: 24px; margin-bottom: 8px; }}
+            p {{ color: rgba(255,255,255,0.7); margin-bottom: 24px; font-size: 15px; }}
+            .btn {{
+                display: inline-block;
+                padding: 14px 32px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: #fff;
+                text-decoration: none;
+                border-radius: 14px;
+                font-size: 16px;
+                font-weight: 600;
+                margin: 6px;
+                transition: transform 0.2s;
+            }}
+            .btn:hover {{ transform: scale(1.05); }}
+            .btn-secondary {{
+                background: rgba(255,255,255,0.1);
+                border: 1px solid rgba(255,255,255,0.2);
+            }}
+            .spinner {{
+                width: 40px; height: 40px;
+                border: 3px solid rgba(255,255,255,0.2);
+                border-top-color: #667eea;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                margin: 0 auto 20px;
+            }}
+            @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="spinner"></div>
+            <div class="logo">🔐</div>
+            <h1>MNVPN</h1>
+            <p>Открываем приложение Happ...</p>
+            <a href="{url}" class="btn">Открыть в Happ</a><br>
+            <a href="https://apps.apple.com/app/id6504518402" class="btn btn-secondary">📱 Скачать Happ (iOS)</a>
+            <a href="https://play.google.com/store/apps/details?id=com.happ.vpn" class="btn btn-secondary">🤖 Скачать Happ (Android)</a>
+        </div>
+        <script>
+            // Try to open the deep link
+            window.location.href = "{url}";
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html)
 
 
 @app.post("/webhook/test")
