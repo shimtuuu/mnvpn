@@ -33,7 +33,7 @@ bot_instance: Bot = None
 
 
 async def check_expired_subscriptions():
-    """Background task: disable expired clients in 3X-UI every hour (instead of deleting)."""
+    """Background task: disable expired clients in 3X-UI every hour."""
     while True:
         try:
             expired = await get_expired_users()
@@ -41,12 +41,11 @@ async def check_expired_subscriptions():
                 user_id = user['user_id']
                 uuid = user.get('uuid')
                 if uuid:
-                    # DISABLE client instead of deleting — this allows reactivation after payment
-                    disabled = await vpn_service.disable_client(uuid)
-                    if disabled:
-                        logger.info(f"Expired client {user_id} (UUID: {uuid}) disabled in 3X-UI")
-                    else:
-                        logger.warning(f"Failed to disable expired client {user_id} (UUID: {uuid})")
+                    deleted = await vpn_service.delete_client(uuid)
+                    if deleted:
+                        logger.info(f"Expired client {user_id} removed from 3X-UI")
+                # Mark key as inactive
+                await update_user_subscription(user_id, user['subscription_expiry'])
         except Exception as e:
             logger.error(f"Error checking expired subs: {e}")
 
