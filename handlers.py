@@ -159,14 +159,9 @@ async def cmd_start(message: Message):
 async def _send_welcome(message: Message):
     """Send welcome banner and main menu."""
     text = (
-        "✨ <b>Добро пожаловать в MinVPN!</b>
-
-"
-        "🔒 Надёжный VPN без логов, без ограничений по скорости и трафику.
-"
-        "🌍 Безопасный доступ в интернет по протоколу VLESS + Reality.
-
-"
+        "✨ <b>Добро пожаловать в MinVPN!</b>\\n\\n"
+        "🔒 Надёжный VPN без логов, без ограничений по скорости и трафику.\\n"
+        "🌍 Безопасный доступ в интернет по протоколу VLESS + Reality.\\n\\n"
         "⬇️ <b>Выберите раздел в меню ниже:</b>"
     )
     
@@ -187,8 +182,6 @@ async def _send_welcome(message: Message):
         photo = FSInputFile(BANNER_PATH)
         await message.answer_photo(photo=photo, caption=text, reply_markup=main_menu_kb(), parse_mode="HTML")
     else:
-        await message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
-    except Exception:
         await message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 
