@@ -295,7 +295,7 @@ async def connect_device(callback: CallbackQuery):
             "✅ <b>ВАШ VPN МОДУЛЬ ГОТОВ!</b>\n"
             "━━━━━━━━━━━━━━━━━\n"
             f"📱 Устройство: <b>{device_info['device_name']}</b>\n"
-            f"🔒 Протоколы: <b>VLESS, VMess, Trojan, Shadowsocks</b>\n"
+            f"🔒 Протоколы: <b>VLESS, Trojan</b>\n"
             f"📅 Активен до: <b>{user['subscription_expiry'][:10]}</b>\n"
             "━━━━━━━━━━━━━━━━━\n\n"
             "📷 <b>Сканируйте QR-код выше</b> в приложении Happ / V2rayNG / FoXray для быстрого подключения.\n\n"
@@ -355,7 +355,7 @@ async def copy_link(callback: CallbackQuery):
         f"🔗 <b>Ссылка подписки:</b>\n\n"
         f"<code>{sub_link}</code>\n\n"
         f"Используйте эту ссылку в разделе «Настройки подписок» вашего приложения.\n"
-        f"Она автоматически загрузит все доступные протоколы (VLESS, VMess, Trojan, Shadowsocks).",
+        f"Она автоматически загрузит все доступные протоколы (VLESS, Trojan).",
         parse_mode="HTML"
     )
 
@@ -899,7 +899,7 @@ async def activate_trial(callback: CallbackQuery):
             "✅ <b>БЕСПЛАТНЫЙ ПЕРИОД АКТИВИРОВАН!</b>\n"
             "━━━━━━━━━━━━━━━━━\n"
             f"📱 Устройство: <b>{device_info['device_name']}</b>\n"
-            f"🔒 Протоколы: <b>VLESS, VMess, Trojan, Shadowsocks</b>\n"
+            f"🔒 Протоколы: <b>VLESS, Trojan</b>\n"
             f"⏰ Действует до: <b>{trial_expiry[:16].replace('T', ' ')}</b>\n"
             "━━━━━━━━━━━━━━━━━\n\n"
             "📷 <b>Сканируйте QR-код выше</b> камерой вашего VPN-приложения для мгновенной настройки.\n\n"
@@ -1081,7 +1081,7 @@ async def info(callback: CallbackQuery):
     try:
         await callback.message.edit_text(
             "ℹ️ <b>О сервисе MNVPN</b>\n\n"
-            "🔒 <b>Протоколы:</b> VLESS, VMess, Trojan, Shadowsocks\n"
+            "🔒 <b>Протоколы:</b> VLESS, Trojan\n"
             "━━━━━━━━━━━━━━━━━\n"
             "✅ Полная анонимность — без логов\n"
             "✅ Защита данных и шифрование трафика\n"
