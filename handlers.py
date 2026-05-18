@@ -1,5 +1,5 @@
 """
-MNVPN Bot Handlers — Commercial-grade Telegram VPN bot.
+MinVPN Bot Handlers — Commercial-grade Telegram VPN bot.
 Sections: Start, Manage VPN, Connect Device, My Configs, Free Trial,
 Gift VPN, Referral Program, Support, Info.
 """
@@ -37,6 +37,25 @@ router = Router()
 
 
 # ==================== Helper Functions ====================
+
+async def edit_or_send_text(message: Message, text: str, reply_markup=None, **kwargs):
+    if getattr(message, "photo", None) or getattr(message, "document", None):
+        try:
+            await message.delete()
+        except:
+            pass
+        await message.answer(text, reply_markup=reply_markup, **kwargs)
+    else:
+        try:
+            await message.edit_text(text, reply_markup=reply_markup, **kwargs)
+        except Exception:
+            try:
+                await message.delete()
+            except:
+                pass
+            await message.answer(text, reply_markup=reply_markup, **kwargs)
+
+
 
 async def reactivate_user_clients(user_id: int) -> int:
     """Re-enable all user's clients after subscription renewal. Returns count of reactivated clients."""
@@ -136,19 +155,39 @@ async def cmd_start(message: Message):
     await _send_welcome(message)
 
 
+
 async def _send_welcome(message: Message):
     """Send welcome banner and main menu."""
-    # Removed photo to enable seamless edit_text navigation (App-like UX)
     text = (
-        "✨ <b>Добро пожаловать в MNVPN!</b>\n\n"
-        "🔒 Надёжный VPN без логов, без ограничений по скорости и трафику.\n"
-        "🌍 Безопасный доступ в интернет по протоколу VLESS + Reality.\n\n"
+        "✨ <b>Добро пожаловать в MinVPN!</b>
+
+"
+        "🔒 Надёжный VPN без логов, без ограничений по скорости и трафику.
+"
+        "🌍 Безопасный доступ в интернет по протоколу VLESS + Reality.
+
+"
         "⬇️ <b>Выберите раздел в меню ниже:</b>"
     )
     
-    # Try to edit, if it fails, send a new message
+    if getattr(message, "photo", None):
+        try:
+            await message.edit_caption(caption=text, reply_markup=main_menu_kb(), parse_mode="HTML")
+            return
+        except Exception:
+            pass
+
     try:
-        await message.edit_text(text, reply_markup=main_menu_kb(), parse_mode="HTML")
+        await message.delete()
+    except:
+        pass
+        
+    if os.path.exists(BANNER_PATH):
+        from aiogram.types import FSInputFile
+        photo = FSInputFile(BANNER_PATH)
+        await message.answer_photo(photo=photo, caption=text, reply_markup=main_menu_kb(), parse_mode="HTML")
+    else:
+        await message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
     except Exception:
         await message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
@@ -211,7 +250,7 @@ async def manage_vpn(callback: CallbackQuery):
     )
 
     try:
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             text,
             reply_markup=manage_vpn_kb(active),
             parse_mode="HTML"
@@ -233,7 +272,7 @@ async def connect_device(callback: CallbackQuery):
     user = await get_user(user_id)
 
     if not user or not is_sub_active_str(user.get('subscription_expiry')):
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             "❌ Ваша подписка не активна.\nСначала купите или продлите подписку.",
             reply_markup=back_to_menu_kb()
         )
@@ -246,7 +285,7 @@ async def connect_device(callback: CallbackQuery):
         builder.button(text="➕ Добавить слот", callback_data="buy_device_slot")
         builder.button(text="⬅️ Назад", callback_data="manage_vpn")
         builder.adjust(1)
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             f"⚠️ Достигнут лимит устройств ({device_count}/{user['device_limit']}).\n"
             f"Купите дополнительный слот за {int(VPN_DEVICE_PRICE)}₽.",
             reply_markup=builder.as_markup()
@@ -254,7 +293,7 @@ async def connect_device(callback: CallbackQuery):
         return
 
     try:
-        await callback.message.edit_text("⏳ Генерирую конфигурацию...")
+        await edit_or_send_text(callback.message, "⏳ Генерирую конфигурацию...")
     except Exception:
         pass
 
@@ -262,7 +301,7 @@ async def connect_device(callback: CallbackQuery):
         username = callback.from_user.username or str(user_id)
         # Генерируем уникальное имя для устройства (Ultima Style)
         next_num = device_count + 1
-        unique_name = f"MNVPN #{next_num} ({username})"
+        unique_name = f"MinVPN #{next_num} ({username})"
         
         device_info = await vpn_service.register_device(
             user_id=user_id,
@@ -272,7 +311,7 @@ async def connect_device(callback: CallbackQuery):
         )
 
         if not device_info:
-            await callback.message.edit_text("❌ Ошибка при создании конфигурации. Попробуйте позже.")
+            await edit_or_send_text(callback.message, "❌ Ошибка при создании конфигурации. Попробуйте позже.")
             return
 
         # Build keyboard - QR Style (removed Happ button as requested)
@@ -323,7 +362,7 @@ async def connect_device(callback: CallbackQuery):
     except Exception as e:
         logger.error(f"Error generating key for user {user_id}: {e}")
         try:
-            await callback.message.edit_text("❌ Ошибка. Попробуйте позже.")
+            await edit_or_send_text(callback.message, "❌ Ошибка. Попробуйте позже.")
         except Exception:
             pass
 
@@ -388,7 +427,7 @@ async def my_configs(callback: CallbackQuery):
 
     if not devices:
         try:
-            await callback.message.edit_text(
+            await edit_or_send_text(callback.message, 
                 "📱 У вас нет подключённых устройств.\n\nНажмите «Подключить устройство» для создания.",
                 reply_markup=back_to_menu_kb()
             )
@@ -412,7 +451,7 @@ async def my_configs(callback: CallbackQuery):
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     try:
-        await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+        await edit_or_send_text(callback.message, text, reply_markup=kb, parse_mode="HTML")
     except Exception:
         await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
 
@@ -431,7 +470,7 @@ async def show_device_key(callback: CallbackQuery):
     sub_link = vpn_service.generate_subscription_link(device['sub_id'])
 
     try:
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             f"🔑 <b>{device.get('device_name', 'Устройство')}</b>\n\n"
             f"🔗 Ссылка подписки:\n<code>{sub_link}</code>",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -496,7 +535,7 @@ async def delete_device_confirm(callback: CallbackQuery):
         ]
     ])
     try:
-        await callback.message.edit_text("⚠️ Вы уверены, что хотите удалить это устройство?", reply_markup=kb)
+        await edit_or_send_text(callback.message, "⚠️ Вы уверены, что хотите удалить это устройство?", reply_markup=kb)
     except Exception:
         pass
 
@@ -507,9 +546,9 @@ async def delete_device_exec(callback: CallbackQuery):
     device_id = callback.data[14:]
     success = await vpn_service.remove_device(device_id)
     if success:
-        await callback.message.edit_text("✅ Устройство удалено.", reply_markup=back_to_menu_kb())
+        await edit_or_send_text(callback.message, "✅ Устройство удалено.", reply_markup=back_to_menu_kb())
     else:
-        await callback.message.edit_text("❌ Ошибка при удалении.", reply_markup=back_to_menu_kb())
+        await edit_or_send_text(callback.message, "❌ Ошибка при удалении.", reply_markup=back_to_menu_kb())
 
 
 # ==================== 💳 Покупка / Продление ====================
@@ -529,7 +568,7 @@ async def choose_device_count(callback: CallbackQuery):
         )])
     keyboard.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="manage_vpn")])
     
-    await callback.message.edit_text(
+    await edit_or_send_text(callback.message, 
         "📱 <b>Выберите количество устройств:</b>\n\n"
         "Цена указана за 1 месяц.\n"
         "При покупке на 3+ месяца — скидка до 20%!",
@@ -561,7 +600,7 @@ async def choose_period(callback: CallbackQuery):
         
     keyboard.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_subscription")])
     
-    await callback.message.edit_text(
+    await edit_or_send_text(callback.message, 
         f"📅 <b>Выберите период подписки</b>\n\n"
         f"Тариф: <b>{device_plan['name']}</b>\n"
         f"Базовая цена: {device_plan['price_per_month_rub']}₽/мес\n"
@@ -606,7 +645,7 @@ async def choose_payment_method(callback: CallbackQuery):
     
     discount_text = f"\n🔥 Скидка: <b>{discount}%</b>" if discount > 0 else ""
     
-    await callback.message.edit_text(
+    await edit_or_send_text(callback.message, 
         f"💳 <b>Оформление подписки</b>\n\n"
         f"Устройств: <b>{device_count}</b>\n"
         f"Период: <b>{period_data['name']}</b>{discount_text}\n\n"
@@ -671,7 +710,7 @@ async def pay_with_card(callback: CallbackQuery):
     new_expiry = await purchase_subscription(user_id, device_count, period_data['days'])
     enabled_count = await reactivate_user_clients(user_id)
     
-    await callback.message.edit_text(
+    await edit_or_send_text(callback.message, 
         f"✅ <b>Тестовая оплата прошла успешно!</b>\n\n"
         f"📱 Устройств в тарифе: <b>{device_count}</b>\n"
         f"📅 Подписка на {period_data['months']} мес. ({period_data['days']} дней)\n"
@@ -724,7 +763,7 @@ async def pay_card_subscription(callback: CallbackQuery):
     reactivated = await reactivate_user_clients(user_id)
     logger.info(f"Subscription renewed for user {user_id}, re-enabled {reactivated} clients")
     
-    await callback.message.edit_text(
+    await edit_or_send_text(callback.message, 
         f"✅ <b>Тестовая оплата прошла успешно!</b>\n\n"
         f"💳 Режим заглушки: подписка активирована на 30 дней.\n"
         f"📅 Новая дата: <code>{new_expiry[:10]}</code>\n"
@@ -741,7 +780,7 @@ async def pay_card_subscription(callback: CallbackQuery):
 @router.callback_query(F.data == "pay_crypto_sub")
 async def pay_crypto_subscription(callback: CallbackQuery):
     await callback.answer()
-    await callback.message.edit_text(
+    await edit_or_send_text(callback.message, 
         f"💎 <b>Оплата криптовалютой (USDT TRC20)</b>\n\n"
         f"💵 Сумма: <b>{int(VPN_SUBSCRIPTION_PRICE)}₽</b> (~эквивалент в USDT)\n\n"
         f"📋 Адрес кошелька:\n<code>{CRYPTO_WALLET_USDT}</code>\n\n"
@@ -766,7 +805,7 @@ async def buy_device_slot(callback: CallbackQuery):
         buttons.append([InlineKeyboardButton(text="💎 Купить слот (крипто)", callback_data="pay_crypto_device")])
     buttons.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="manage_vpn")])
 
-    await callback.message.edit_text(
+    await edit_or_send_text(callback.message, 
         f"📱 <b>Дополнительный слот</b>\n\n"
         f"Стоимость: <b>{int(VPN_DEVICE_PRICE)}₽</b>\n"
         f"Позволит подключить ещё одно устройство.",
@@ -786,7 +825,7 @@ async def pay_card_device(callback: CallbackQuery):
     from database import update_user_device_limit
     await update_user_device_limit(user_id, new_limit)
     
-    await callback.message.edit_text(
+    await edit_or_send_text(callback.message, 
         f"✅ <b>Тестовая оплата слота прошла успешно!</b>\n\n"
         f"📱 Ваш лимит устройств увеличен до: <b>{new_limit}</b>",
         reply_markup=back_to_menu_kb(),
@@ -801,7 +840,7 @@ async def free_trial(callback: CallbackQuery):
     await callback.answer()
 
     if not TRIAL_ENABLED:
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             "🚫 Бесплатный период временно недоступен.",
             reply_markup=back_to_menu_kb()
         )
@@ -811,7 +850,7 @@ async def free_trial(callback: CallbackQuery):
     used = await has_used_trial(user_id)
 
     if used:
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             "⚠️ Вы уже использовали бесплатный период.\n\n"
             f"Купите полную подписку за {int(VPN_SUBSCRIPTION_PRICE)}₽ для продолжения.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -826,7 +865,7 @@ async def free_trial(callback: CallbackQuery):
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu")],
     ])
 
-    await callback.message.edit_text(
+    await edit_or_send_text(callback.message, 
         f"🆓 <b>Бесплатный пробный период</b>\n\n"
         f"⏰ Длительность: <b>{TRIAL_HOURS} часов</b>\n"
         f"📱 Лимит: <b>1 устройство</b>\n"
@@ -845,7 +884,7 @@ async def activate_trial(callback: CallbackQuery):
     used = await has_used_trial(user_id)
     if used:
         try:
-            await callback.message.edit_text("⚠️ Бесплатный период уже использован.", reply_markup=back_to_menu_kb())
+            await edit_or_send_text(callback.message, "⚠️ Бесплатный период уже использован.", reply_markup=back_to_menu_kb())
         except Exception:
             pass
         return
@@ -857,7 +896,7 @@ async def activate_trial(callback: CallbackQuery):
     await record_subscription_history(user_id, "trial_activated", None, trial_expiry)
 
     try:
-        await callback.message.edit_text("⏳ Активация бесплатного периода...")
+        await edit_or_send_text(callback.message, "⏳ Активация бесплатного периода...")
     except Exception:
         pass
 
@@ -918,7 +957,7 @@ async def activate_trial(callback: CallbackQuery):
             await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
     else:
         try:
-            await callback.message.edit_text("❌ Ошибка активации. Попробуйте позже.")
+            await edit_or_send_text(callback.message, "❌ Ошибка активации. Попробуйте позже.")
         except:
             pass
 
@@ -938,7 +977,7 @@ async def gift_menu(callback: CallbackQuery):
     buttons.append([InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back_menu")])
 
     try:
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             "🎁 <b>Подарить VPN</b>\n\n"
             "Выберите срок подарочной подписки.\n"
             "После оплаты вы получите ссылку, которую можно отправить другу.",
@@ -962,7 +1001,7 @@ async def gift_create(callback: CallbackQuery):
     gift_link = f"https://t.me/{bot_info.username}?start=gift_{code}"
 
     try:
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             f"🎁 <b>Подарочный сертификат создан!</b>\n\n"
             f"📦 Срок: <b>{months} мес. ({days} дней)</b>\n"
             f"💵 Стоимость: <b>{price}₽</b>\n\n"
@@ -1029,7 +1068,7 @@ async def referral_program(callback: CallbackQuery):
     ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
 
     try:
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             f"👥 <b>Реферальная программа</b>\n\n"
             f"Приглашайте друзей и получайте <b>+{REFERRAL_BONUS_DAYS} дня</b> к подписке за каждого!\n\n"
             f"🔗 Ваша ссылка:\n<code>{ref_link}</code>\n\n"
@@ -1054,8 +1093,8 @@ async def support(callback: CallbackQuery):
     ])
 
     try:
-        await callback.message.edit_text(
-            f"💬 <b>Поддержка MNVPN</b>\n\n"
+        await edit_or_send_text(callback.message, 
+            f"💬 <b>Поддержка MinVPN</b>\n\n"
             f"По любым вопросам напишите нашему оператору: <b>@{SUPPORT_USERNAME}</b>\n"
             f"Обычно отвечаем в течение 30 минут.\n\n"
             f"📧 Ваш ID для обращения: <code>{callback.from_user.id}</code>",
@@ -1079,8 +1118,8 @@ async def info(callback: CallbackQuery):
     ])
 
     try:
-        await callback.message.edit_text(
-            "ℹ️ <b>О сервисе MNVPN</b>\n\n"
+        await edit_or_send_text(callback.message, 
+            "ℹ️ <b>О сервисе MinVPN</b>\n\n"
             "🔒 <b>Протоколы:</b> VLESS, Trojan\n"
             "━━━━━━━━━━━━━━━━━\n"
             "✅ Полная анонимность — без логов\n"
@@ -1143,7 +1182,7 @@ async def platform_setup(callback: CallbackQuery):
             "1️⃣ Скачайте <b>v2rayN</b> с GitHub.\n"
             "2️⃣ Распакуйте архив и запустите v2rayN.exe.\n"
             "3️⃣ Нажмите <b>Subscription Group</b> → <b>Server Subscription Setting</b>.\n"
-            "4️⃣ Нажмите <b>Add</b>, вставьте ссылку и имя MNVPN.\n"
+            "4️⃣ Нажмите <b>Add</b>, вставьте ссылку и имя MinVPN.\n"
             "5️⃣ Нажмите <b>Update Subscription</b>.\n"
             "6️⃣ Выберите сервер и нажмите <b>Enter</b>."
         ),
@@ -1174,7 +1213,7 @@ async def platform_setup(callback: CallbackQuery):
         caption += "\n\n🔑 <i>Чтобы получить персональную ссылку, сначала активируйте подписку и создайте устройство в «Управление VPN».</i>"
 
     try:
-        await callback.message.edit_text(caption, reply_markup=kb, parse_mode="HTML")
+        await edit_or_send_text(callback.message, caption, reply_markup=kb, parse_mode="HTML")
     except Exception:
         pass
 
@@ -1194,7 +1233,7 @@ async def setup_general(callback: CallbackQuery):
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="info")],
     ])
     try:
-        await callback.message.edit_text(
+        await edit_or_send_text(callback.message, 
             "🛠 <b>Базовая настройка</b>\n\n"
             "Для подключения вам понадобится:\n"
             "1. Приложение (Happ VPN, v2rayNG и др.)\n"
@@ -1209,7 +1248,7 @@ async def setup_general(callback: CallbackQuery):
 @router.message(Command("help"))
 async def cmd_help(message: Message):
     await message.answer(
-        "❓ <b>Справка MNVPN</b>\n\n"
+        "❓ <b>Справка MinVPN</b>\n\n"
         "<b>Как подключить VPN?</b>\n"
         "→ Меню → Управление VPN → Подключить устройство\n\n"
         "<b>Как добавить второе устройство?</b>\n"

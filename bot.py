@@ -1,5 +1,5 @@
 """
-MNVPN Bot — Entry point.
+MinVPN Bot — Entry point.
 Initializes DB, payment service, VPN panel connection.
 Runs background tasks for subscription expiry and notifications.
 """
@@ -78,7 +78,7 @@ async def notify_expiring_subscriptions(bot: Bot):
 
 
 async def main():
-    logger.info("Starting MNVPN Bot...")
+    logger.info("Starting MinVPN Bot...")
 
     # Initialize database
     await init_db()

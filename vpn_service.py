@@ -323,13 +323,13 @@ class VPNService:
 
     # ==================== Link Generation ====================
 
-    def generate_subscription_link(self, sub_id: str, name: str = "MNVPN") -> str:
+    def generate_subscription_link(self, sub_id: str, name: str = "MinVPN") -> str:
         """Generate HTTPS subscription URL for Happ/V2rayNG."""
         sub_url = f"https://{SERVER_DOMAIN}:{SUB_PORT}/sub/{SUB_SECRET}/{sub_id}"
         return sub_url
 
-    def generate_happ_deeplink(self, sub_id: str, name: str = "MNVPN") -> str:
-        """Generate Happ deep link with happ:// scheme via MNVPN redirect."""
+    def generate_happ_deeplink(self, sub_id: str, name: str = "MinVPN") -> str:
+        """Generate Happ deep link with happ:// scheme via MinVPN redirect."""
         sub_url = self.generate_subscription_link(sub_id, name)
         clean_name = name.replace(" ", "_").replace("#", "N")
         deep_link = f"happ://add/{sub_url}#{clean_name}"
@@ -337,7 +337,7 @@ class VPNService:
         wrapped = f"https://{SERVER_DOMAIN}:8000/r?url={deep_link}"
         return wrapped
 
-    def generate_vless_link(self, client_uuid: str, name: str = "MNVPN") -> str:
+    def generate_vless_link(self, client_uuid: str, name: str = "MinVPN") -> str:
         """Generate a raw vless:// link for manual import/QR."""
         pbk = "Dodq32f0P7YVGHkvdI-njibzKlibaShzqkBrglCDEyA"
         sid = "0c539e1b54f35027"

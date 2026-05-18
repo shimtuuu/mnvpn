@@ -1,5 +1,5 @@
 """
-Admin handlers for MNVPN bot.
+Admin handlers for MinVPN bot.
 Inline Telegram admin panel: stats, user management, broadcast, crypto confirmation.
 """
 
@@ -56,7 +56,7 @@ async def cmd_admin(message: Message):
         return
 
     await message.answer(
-        "⚙️ <b>Админ-панель MNVPN</b>",
+        "⚙️ <b>Админ-панель MinVPN</b>",
         reply_markup=admin_menu_kb(),
         parse_mode="HTML"
     )
@@ -77,7 +77,7 @@ async def admin_stats(callback: CallbackQuery):
     online = await vpn_service.get_online_clients()
 
     await callback.message.answer(
-        f"📊 <b>Статистика MNVPN</b>\n\n"
+        f"📊 <b>Статистика MinVPN</b>\n\n"
         f"👥 Всего пользователей: <b>{total_users}</b>\n"
         f"✅ Активных подписок: <b>{active_subs}</b>\n"
         f"🟢 Онлайн сейчас: <b>{len(online)}</b>\n"
@@ -362,4 +362,4 @@ async def admin_back(callback: CallbackQuery):
         await callback.answer("❌", show_alert=True)
         return
     await callback.answer()
-    await callback.message.answer("⚙️ <b>Админ-панель MNVPN</b>", reply_markup=admin_menu_kb(), parse_mode="HTML")
+    await callback.message.answer("⚙️ <b>Админ-панель MinVPN</b>", reply_markup=admin_menu_kb(), parse_mode="HTML")
