@@ -1056,7 +1056,7 @@ async def support(callback: CallbackQuery):
     try:
         await callback.message.edit_text(
             f"💬 <b>Поддержка MNVPN</b>\n\n"
-            f"По любым вопросам напишите нашему оператору.\n"
+            f"По любым вопросам напишите нашему оператору: <b>@{SUPPORT_USERNAME}</b>\n"
             f"Обычно отвечаем в течение 30 минут.\n\n"
             f"📧 Ваш ID для обращения: <code>{callback.from_user.id}</code>",
             reply_markup=kb,
@@ -1072,6 +1072,8 @@ async def support(callback: CallbackQuery):
 async def info(callback: CallbackQuery):
     await callback.answer()
     kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📄 Политика конфиденциальности", url="https://telegra.ph/Politika-konfidencialnosti-04-01-26")],
+        [InlineKeyboardButton(text="📄 Пользовательское соглашение", url="https://telegra.ph/Polzovatelskoe-soglashenie-04-01-19")],
         [InlineKeyboardButton(text="📲 Как подключиться?", callback_data="setup_general")],
         [InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back_menu")],
     ])
