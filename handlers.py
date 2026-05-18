@@ -233,7 +233,7 @@ async def connect_device(callback: CallbackQuery):
     user = await get_user(user_id)
 
     if not user or not is_sub_active_str(user.get('subscription_expiry')):
-        await callback.message.answer(
+        await callback.message.edit_text(
             "❌ Ваша подписка не активна.\nСначала купите или продлите подписку.",
             reply_markup=back_to_menu_kb()
         )
@@ -246,7 +246,7 @@ async def connect_device(callback: CallbackQuery):
         builder.button(text="➕ Добавить слот", callback_data="buy_device_slot")
         builder.button(text="⬅️ Назад", callback_data="manage_vpn")
         builder.adjust(1)
-        await callback.message.answer(
+        await callback.message.edit_text(
             f"⚠️ Достигнут лимит устройств ({device_count}/{user['device_limit']}).\n"
             f"Купите дополнительный слот за {int(VPN_DEVICE_PRICE)}₽.",
             reply_markup=builder.as_markup()
@@ -507,9 +507,9 @@ async def delete_device_exec(callback: CallbackQuery):
     device_id = callback.data[14:]
     success = await vpn_service.remove_device(device_id)
     if success:
-        await callback.message.answer("✅ Устройство удалено.", reply_markup=back_to_menu_kb())
+        await callback.message.edit_text("✅ Устройство удалено.", reply_markup=back_to_menu_kb())
     else:
-        await callback.message.answer("❌ Ошибка при удалении.", reply_markup=back_to_menu_kb())
+        await callback.message.edit_text("❌ Ошибка при удалении.", reply_markup=back_to_menu_kb())
 
 
 # ==================== 💳 Покупка / Продление ====================
@@ -671,7 +671,7 @@ async def pay_with_card(callback: CallbackQuery):
     new_expiry = await purchase_subscription(user_id, device_count, period_data['days'])
     enabled_count = await reactivate_user_clients(user_id)
     
-    await callback.message.answer(
+    await callback.message.edit_text(
         f"✅ <b>Тестовая оплата прошла успешно!</b>\n\n"
         f"📱 Устройств в тарифе: <b>{device_count}</b>\n"
         f"📅 Подписка на {period_data['months']} мес. ({period_data['days']} дней)\n"
@@ -724,7 +724,7 @@ async def pay_card_subscription(callback: CallbackQuery):
     reactivated = await reactivate_user_clients(user_id)
     logger.info(f"Subscription renewed for user {user_id}, re-enabled {reactivated} clients")
     
-    await callback.message.answer(
+    await callback.message.edit_text(
         f"✅ <b>Тестовая оплата прошла успешно!</b>\n\n"
         f"💳 Режим заглушки: подписка активирована на 30 дней.\n"
         f"📅 Новая дата: <code>{new_expiry[:10]}</code>\n"
@@ -741,7 +741,7 @@ async def pay_card_subscription(callback: CallbackQuery):
 @router.callback_query(F.data == "pay_crypto_sub")
 async def pay_crypto_subscription(callback: CallbackQuery):
     await callback.answer()
-    await callback.message.answer(
+    await callback.message.edit_text(
         f"💎 <b>Оплата криптовалютой (USDT TRC20)</b>\n\n"
         f"💵 Сумма: <b>{int(VPN_SUBSCRIPTION_PRICE)}₽</b> (~эквивалент в USDT)\n\n"
         f"📋 Адрес кошелька:\n<code>{CRYPTO_WALLET_USDT}</code>\n\n"
@@ -766,7 +766,7 @@ async def buy_device_slot(callback: CallbackQuery):
         buttons.append([InlineKeyboardButton(text="💎 Купить слот (крипто)", callback_data="pay_crypto_device")])
     buttons.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="manage_vpn")])
 
-    await callback.message.answer(
+    await callback.message.edit_text(
         f"📱 <b>Дополнительный слот</b>\n\n"
         f"Стоимость: <b>{int(VPN_DEVICE_PRICE)}₽</b>\n"
         f"Позволит подключить ещё одно устройство.",
@@ -786,7 +786,7 @@ async def pay_card_device(callback: CallbackQuery):
     from database import update_user_device_limit
     await update_user_device_limit(user_id, new_limit)
     
-    await callback.message.answer(
+    await callback.message.edit_text(
         f"✅ <b>Тестовая оплата слота прошла успешно!</b>\n\n"
         f"📱 Ваш лимит устройств увеличен до: <b>{new_limit}</b>",
         reply_markup=back_to_menu_kb(),
@@ -801,7 +801,7 @@ async def free_trial(callback: CallbackQuery):
     await callback.answer()
 
     if not TRIAL_ENABLED:
-        await callback.message.answer(
+        await callback.message.edit_text(
             "🚫 Бесплатный период временно недоступен.",
             reply_markup=back_to_menu_kb()
         )
@@ -811,7 +811,7 @@ async def free_trial(callback: CallbackQuery):
     used = await has_used_trial(user_id)
 
     if used:
-        await callback.message.answer(
+        await callback.message.edit_text(
             "⚠️ Вы уже использовали бесплатный период.\n\n"
             f"Купите полную подписку за {int(VPN_SUBSCRIPTION_PRICE)}₽ для продолжения.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -826,7 +826,7 @@ async def free_trial(callback: CallbackQuery):
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_menu")],
     ])
 
-    await callback.message.answer(
+    await callback.message.edit_text(
         f"🆓 <b>Бесплатный пробный период</b>\n\n"
         f"⏰ Длительность: <b>{TRIAL_HOURS} часов</b>\n"
         f"📱 Лимит: <b>1 устройство</b>\n"
