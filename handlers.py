@@ -207,14 +207,23 @@ async def manage_vpn(callback: CallbackQuery):
     if active:
         expiry = user['subscription_expiry'][:10]
         try:
-            days_left = (datetime.fromisoformat(user['subscription_expiry']) - datetime.now()).days
+            delta = datetime.fromisoformat(user['subscription_expiry']) - datetime.now()
+            if delta.days >= 1:
+                days_left = f"{delta.days} дн."
+            else:
+                hours = int(delta.total_seconds() / 3600)
+                if hours >= 1:
+                    days_left = f"{hours} ч."
+                else:
+                    mins = max(1, int(delta.total_seconds() / 60))
+                    days_left = f"{mins} мин."
         except:
-            days_left = 0
+            days_left = "0 дн."
         status_emoji = "🟢"
         status_text = "Активна"
     else:
         expiry = "—"
-        days_left = 0
+        days_left = "0 дн."
         status_emoji = "🔴"
         status_text = "Не активна"
 
@@ -236,7 +245,7 @@ async def manage_vpn(callback: CallbackQuery):
                     total_down += traffic['down']
         total_gb = (total_up + total_down) / (1024**3)
         traffic_text = f"📊 Использовано: <b>{total_gb:.2f} ГБ</b>\n"
-        text += f"⏳ Осталось дней: <b>{days_left}</b>\n{traffic_text}"
+        text += f"⏳ Осталось: <b>{days_left}</b>\n{traffic_text}"
     text += (
         f"📱 Устройств: <b>{device_count} / {user.get('device_limit', 1)}</b>\n\n"
         f"💰 Стоимость: <b>{int(VPN_SUBSCRIPTION_PRICE)}₽ / {SUBSCRIPTION_DAYS} дней</b>"
