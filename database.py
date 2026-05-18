@@ -185,17 +185,6 @@ async def update_user_subscription(user_id: int, expiry_date: str):
         await db.commit()
         logger.info(f"User {user_id} subscription updated to {expiry_date}")
 
-async def purchase_subscription(user_id: int, devices: int, days: int):
-    """Extend subscription and set device limit (Ultima style: overwrites)."""
-    async with aiosqlite.connect(DB_PATH) as db:
-        new_expiry = (datetime.now() + timedelta(days=days)).isoformat()
-        await db.execute(
-            'UPDATE users SET subscription_expiry = ?, max_devices = ? WHERE user_id = ?',
-            (new_expiry, devices, user_id)
-        )
-        await db.commit()
-        return new_expiry
-
 
 async def extend_subscription(user_id: int, days: int):
     """Extend subscription by N days from NOW (no accumulation like Ultima VPN)."""

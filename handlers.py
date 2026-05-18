@@ -744,7 +744,7 @@ async def successful_payment(message: Message):
     )
 
 
-@router.callback_query(F.data == "pay_card_sub")
+@router.callback_query(F.data == "sub_pay_card")
 async def pay_card_subscription(callback: CallbackQuery):
     await callback.answer()
     # Заглушка: имитация успешной оплаты для теста
@@ -770,7 +770,7 @@ async def pay_card_subscription(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data == "pay_crypto_sub")
+@router.callback_query(F.data == "sub_pay_crypto")
 async def pay_crypto_subscription(callback: CallbackQuery):
     await callback.answer()
     await edit_or_send_text(callback.message, 
@@ -792,10 +792,10 @@ async def buy_device_slot(callback: CallbackQuery):
 
     buttons = []
     # Card payment (Stub mode is active)
-    buttons.append([InlineKeyboardButton(text="💳 Купить слот (картой)", callback_data="pay_card_device")])
+    buttons.append([InlineKeyboardButton(text="💳 Купить слот (картой)", callback_data="device_pay_card")])
     
     if CRYPTO_WALLET_USDT:
-        buttons.append([InlineKeyboardButton(text="💎 Купить слот (крипто)", callback_data="pay_crypto_device")])
+        buttons.append([InlineKeyboardButton(text="💎 Купить слот (крипто)", callback_data="device_pay_crypto")])
     buttons.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="manage_vpn")])
 
     await edit_or_send_text(callback.message, 
@@ -807,7 +807,7 @@ async def buy_device_slot(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data == "pay_card_device")
+@router.callback_query(F.data == "device_pay_card")
 async def pay_card_device(callback: CallbackQuery):
     await callback.answer()
     # Заглушка: имитация покупки слота
@@ -1081,7 +1081,7 @@ async def referral_program(callback: CallbackQuery):
 async def support(callback: CallbackQuery):
     await callback.answer()
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📲 Как подключиться?", callback_data="setup_general")],
+        [InlineKeyboardButton(text="📲 Как подключиться?", callback_data="howto_setup")],
         [InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back_menu")],
     ])
 
@@ -1106,7 +1106,7 @@ async def info(callback: CallbackQuery):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📄 Политика конфиденциальности", url="https://telegra.ph/Politika-konfidencialnosti-04-01-26")],
         [InlineKeyboardButton(text="📄 Пользовательское соглашение", url="https://telegra.ph/Polzovatelskoe-soglashenie-04-01-19")],
-        [InlineKeyboardButton(text="📲 Как подключиться?", callback_data="setup_general")],
+        [InlineKeyboardButton(text="📲 Как подключиться?", callback_data="howto_setup")],
         [InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back_menu")],
     ])
 
@@ -1194,7 +1194,7 @@ async def platform_setup(callback: CallbackQuery):
     if sub_link:
         buttons.append([InlineKeyboardButton(text="📋 Скопировать ссылку", callback_data=f"copy_{device['sub_id']}")])
     
-    back_cb = f"showkey_{device_id}" if device_id != "none" else "setup_general"
+    back_cb = f"showkey_{device_id}" if device_id != "none" else "howto_setup"
     buttons.append([InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)])
     
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -1211,7 +1211,7 @@ async def platform_setup(callback: CallbackQuery):
         pass
 
 
-@router.callback_query(F.data == "setup_general")
+@router.callback_query(F.data == "howto_setup")
 async def setup_general(callback: CallbackQuery):
     await callback.answer()
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -1253,5 +1253,21 @@ async def cmd_help(message: Message):
         "<b>Как пригласить друга?</b>\n"
         "→ Меню → Реферальная программа",
         reply_markup=back_to_menu_kb(),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(F.data == "device_pay_crypto")
+async def pay_crypto_device(callback: CallbackQuery):
+    await callback.answer()
+    await edit_or_send_text(callback.message, 
+        f"💎 <b>Оплата слота криптовалютой (USDT TRC20)</b>\n\n"
+        f"💵 Сумма: <b>{int(VPN_DEVICE_PRICE)}₽</b> (~эквивалент в USDT)\n\n"
+        f"📋 Адрес кошелька:\n<code>{CRYPTO_WALLET_USDT}</code>\n\n"
+        f"После перевода отправьте скриншот или хеш транзакции оператору:\n"
+        f"👉 <b>@{SUPPORT_USERNAME}</b>\n\n"
+        f"Оператор проверит оплату и вручную добавит вам слот.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_device_slot")]
+        ]),
         parse_mode="HTML"
     )
