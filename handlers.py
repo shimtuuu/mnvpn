@@ -159,9 +159,9 @@ async def cmd_start(message: Message):
 async def _send_welcome(message: Message):
     """Send welcome banner and main menu."""
     text = (
-        "✨ <b>Добро пожаловать в MinVPN!</b>\\n\\n"
-        "🔒 Надёжный VPN без логов, без ограничений по скорости и трафику.\\n"
-        "🌍 Безопасный доступ в интернет по протоколу VLESS + Reality.\\n\\n"
+        "✨ <b>Добро пожаловать в MinVPN!</b>\n\n"
+        "🔒 Надёжный VPN без логов, без ограничений по скорости и трафику.\n"
+        "🌍 Безопасный доступ в интернет по протоколу VLESS + Reality.\n\n"
         "⬇️ <b>Выберите раздел в меню ниже:</b>"
     )
     
